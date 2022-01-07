@@ -1,11 +1,14 @@
 import numpy as np
 from itertools import combinations
 
+sig_res = 3
+tot_res = 6
+
 def LV_model(t, N, A, mu):
     return N*(mu-A.dot(N))
 
 def generate_species(n_coms = 200, years = 800, locs = np.zeros(3), sig_locs = np.ones(3),
-                     sigs = [.5, .1, .8], utils = [1.5, 3, 0.08],
+                     sigs = [1, .3, .8], utils = [1.5, 3, 0.08],
                      ms = [.5, .2, .25], level = [0.5, 0.5, 0]):
     
     level = np.array(level)/np.sum(level)
@@ -29,7 +32,7 @@ def generate_species(n_coms = 200, years = 800, locs = np.zeros(3), sig_locs = n
 # one-dimensional resource axis
 
 def compute_LV_param(species_id, i = 0, pres = [0,1],
-                     sig_res = 4, tot_res = 10):
+                     sig_res = sig_res, tot_res = tot_res):
     # interaction matrix
     A = np.zeros((np.sum(pres), np.sum(pres)))
     
@@ -153,7 +156,7 @@ def community_equilibrium(mu, A):
     print(A)
     raise
 
-def community_assembly(species_id, sig_res = 4, tot_res = 10):
+def community_assembly(species_id, sig_res = sig_res, tot_res = tot_res):
     n_coms, years = species_id["loc"].shape
 
     present = np.full((n_coms, years+1, years), False, dtype = bool)
@@ -195,9 +198,10 @@ def community_assembly(species_id, sig_res = 4, tot_res = 10):
     return present, equi_all, equi_all>0
 
 if __name__ == "__main__":
-    species_id = generate_species()
+    species_id = generate_species(100,400)
     
     present, equi_all, surv = community_assembly(species_id)
     
     np.savez("Data_LV_reference.npz", **species_id, equi_all = equi_all,
              surv = surv, present = present)
+    import functions_for_plotting

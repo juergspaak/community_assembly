@@ -53,14 +53,17 @@ def plot_invasion_prob(axc, surv, species_id):
                 continue
         axc.plot(years, np.mean((persistence_length > 0) & (species_id["level"] == level), axis = 0),
                  colors[level])
+        axc.set_ylim([0,1])
         
-def plot_persistence_time(axc, surv, species_id, cutoff = 50):
+def plot_persistence_time(axc, surv, species_id, cutoff = 50
+                          , trait_condition = True):
     persistence_length = np.sum(surv, axis = 1)[:,cutoff:]
     years = np.arange(surv.shape[-2]+1)
     for level in range(len(colors)):
         if not (species_id["level"] == level).any():
                 continue
-        hist, bins = np.histogram(persistence_length[species_id["level"][:,cutoff:] == level],
+        hist, bins = np.histogram(persistence_length[trait_condition & 
+                                    species_id["level"][:,cutoff:] == level],
                                   bins = years[::5])
         hist[hist == 0] = -1
         axc.plot(bins[1:], hist, '.', color = colors[level])
