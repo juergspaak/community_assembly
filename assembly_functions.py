@@ -1,8 +1,8 @@
 import numpy as np
 from itertools import combinations
 
-sig_res = 3
-tot_res = 6
+sig_res = 2
+tot_res = 10
 
 def LV_model(t, N, A, mu):
     return N*(mu-A.dot(N))
@@ -198,10 +198,21 @@ def community_assembly(species_id, sig_res = sig_res, tot_res = tot_res):
     return present, equi_all, equi_all>0
 
 if __name__ == "__main__":
-    species_id = generate_species(100,400)
+    species_id = generate_species(3,5000, sigs = [0.5, 1, .8],
+                                  utils = [1.5, 1.5, 0.08])
     
     present, equi_all, surv = community_assembly(species_id)
     
-    np.savez("Data_LV_reference.npz", **species_id, equi_all = equi_all,
-             surv = surv, present = present)
-    import functions_for_plotting
+    """np.savez("Data_LV_reference.npz", **species_id, equi_all = equi_all,
+             surv = surv, present = present)"""
+    import functions_for_plotting as fp
+    import matplotlib.pyplot as plt
+    
+    fig, ax = plt.subplots(4,3, sharex = True, sharey = "row", figsize = (10,10))
+    fp.plot_richness(ax[0], surv, species_id)
+    fp.plot_traits(ax[1,:2], surv, species_id)
+    #fp.plot_traits(ax[2,:2], surv, species_id)
+    #plot_invasion_prob(ax[-1,-1], surv, species_id)
+    
+    fp.plot_mean_traits(ax[1,-1], surv, species_id, 0)
+    fp.plot_mean_traits(ax[2,-1], surv, species_id, 1)

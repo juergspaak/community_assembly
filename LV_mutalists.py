@@ -7,7 +7,7 @@ from matplotlib.cm import viridis
 def LV_model(t, N, A, mu):
     return N*(mu-A.dot(N))
 
-n_coms = 500
+n_coms = 5
 years = 200
 com = (n_coms, years)
 
@@ -17,13 +17,13 @@ ls = ["-", ":", "--"]
 # one-dimensional resource axis
 # create species
 
-sig_res = 4
+sig_res = 5
 tot_res = 10
 H_mut = 2 # halfsaturation constant for mutualists
 predator_presence = "_predators"
 
-pred = .5 if predator_presence else 0
 p = np.array([3,1,3])
+p = np.array([1,1,0])
 p = p/np.sum(p)
 species_id = {"loc": np.random.normal(0,1, com),
               "sig": np.array([np.full(com, 1),
@@ -126,7 +126,7 @@ sol = solve_ivp(model, [0,20], N_start, args = (mu, A, B))
 #plt.plot(sol.t, sol.y.T)
 
 time = np.array([0,20])
-plot_until = 5
+plot_until = 1
 for i in range(n_coms):
     if i<plot_until:
         fig, ax = plt.subplots(2,1)
@@ -170,8 +170,9 @@ for i in range(n_coms):
 richness = np.mean(np.sum(present, axis = -1), axis = 0)
 richness[1:-1] -= 1#"""
 
+"""
 np.savez("data_LV_assembly_mut_pred.npz", **species_id, present = present,
-         equi_all = equi_all, richness = richness)
+         equi_all = equi_all, richness = richness)"""
 
-import test_plot_all
+#import test_plot_all
 plt.show()
