@@ -1,22 +1,28 @@
 import numpy as np
 from itertools import combinations
 
-sig_res = 2
-tot_res = 10
+sig_res = 3
+max_res = 3
+tot_res = max_res*np.sqrt(2*np.pi*sig_res**2)
 
 def LV_model(t, N, A, mu):
     return N*(mu-A.dot(N))
 
-def generate_species(n_coms = 200, years = 800, locs = np.zeros(3), sig_locs = np.ones(3),
-                     sigs = [1, .3, .8], utils = [1.5, 3, 0.08],
+def generate_species(n_coms = 200, years = 800, locs = np.zeros(3),
+                     sig_locs = np.ones(3),
+                     sigs = [1, .3, .8], max_utils = [1.5, 3, 0.08],
                      ms = [.5, .2, .25], level = [0.5, 0.5, 0]):
     
     level = np.array(level)/np.sum(level)
     com = (n_coms, years)
-    species_id = {"loc": np.random.normal(0,1, com),
+    species_id = {"loc": np.random.normal(0,1, com), # trait location
+                  # consumption variation
               "sig": np.array([np.full(com, sig) for sig in sigs]),
-              "util": np.array([np.full(com, util) for util in utils]),
+              # maximum consumption
+              "max_util": np.array([np.full(com, util) for util in max_utils]),
+              # morality rate
               "m": np.array([np.full(com, m) for m in ms]),
+              # trophic level
               "level": np.random.choice(np.arange(3), p = level, size = com)}
     
     # potentially change location and variation of trophic levels
@@ -24,6 +30,7 @@ def generate_species(n_coms = 200, years = 800, locs = np.zeros(3), sig_locs = n
         species_id["loc"][species_id["level"] == i] *= sig_locs[i]
         species_id["loc"][species_id["level"] == i] += locs[i]
     
+    # first species to arrive must be basal to avoid issues
     species_id["level"][:,:2] = 0
     
     return species_id
@@ -40,10 +47,13 @@ def compute_LV_param(species_id, i = 0, pres = [0,1],
     level = species_id["level"][i,pres]
     loc = species_id["loc"][i, pres]
     sig = species_id["sig"][level, i, pres]
-    util = species_id["util"][level, i, pres]
+    max_util = species_id["max_util"][level, i, pres]
     id_prey = np.arange(len(loc))[species_id["level"][i,pres] == 0]
     id_pred = np.arange(len(loc))[species_id["level"][i,pres] == 1]
     id_mut = np.arange(len(loc))[species_id["level"][i,pres] == 2]
+    
+    # change maximum utilisation to total utilisation
+    util = max_util*np.sqrt(2*np.pi*sig**2)
     
     sig2 = sig[:,np.newaxis]**2 + sig**2
     # species interaction if all species were prey
@@ -198,8 +208,8 @@ def community_assembly(species_id, sig_res = sig_res, tot_res = tot_res):
     return present, equi_all, equi_all>0
 
 if __name__ == "__main__":
-    species_id = generate_species(3,5000, sigs = [0.5, 1, .8],
-                                  utils = [1.5, 1.5, 0.08])
+    species_id = generate_species(20,2000, sigs = [1.1, 1, .8],
+                                  max_utils = [1, 1, 0.08])
     
     present, equi_all, surv = community_assembly(species_id)
     
