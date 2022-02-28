@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import warnings
 
+from scipy.stats import spearmanr, pearsonr
 
+"""
 path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
 presences = np.load(path + "biotime_converted.npz")
 
@@ -62,6 +64,9 @@ for i, comb in enumerate(combs):
 
 
 ps = np.sum(corrs_real[...,np.newaxis] > corrs_virtual, axis = -1)/itera
+#"""
+
+"""
 fig, ax = plt.subplots(4,2, sharex = True, sharey = True, figsize = (9,9))
 ax = ax.flatten()
 for i in range(len(combs)):
@@ -95,6 +100,20 @@ ax[-1].set_xlabel("percentile")
 ax[-2].set_xlabel("percentile")
 #ax[0].set_xlim([0,1])
 fig.savefig("Figure_extinction_biotime_percentile.pdf")
+"""
+study_len = np.array([len(presences[study]) for study in study_ids])
+
+fig, ax = plt.subplots(4,2, sharex = True, sharey = True, figsize = (9,9))
+ax = ax.flatten()
+
+for i in range(len(combs)):
+    
+    ind = study_len>20
+    ax[i].scatter(study_len, ps[i])
+    ax[i].set_title(combs[i][0] + "_" + combs[i][1] + combs[i][2])
+    ax[i].set_xlabel(np.round(pearsonr(study_len[ind], ps[i, ind])[0], 3))
+    
+fig.tight_layout()
 
 
     
