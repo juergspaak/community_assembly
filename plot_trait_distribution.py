@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import assembly_functions as af
-import functions_for_plotting as fp
 from scipy.stats import gaussian_kde
 
 n_year = 1000

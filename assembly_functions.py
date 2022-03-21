@@ -67,82 +67,6 @@ def generate_species(n_coms = 200, years = 800, locs = np.zeros(2),
     
     return species_id
 
-###############################################################################
-# one-dimensional resource axis
-
-def LV_asymetric(loc, level, sig, alpha_max = alpha_max,
-                 defended_res = None, alpha_max_inv = None,
-                 omega = omega, mu_max = mu_max, ms = ms, 
-                 lv_invader = 0, defended_inv = False):
-    
-    if alpha_max_inv is None:
-        alpha_max_inv = alpha_max[1] if lv_invader else alpha_max[0]
-    
-    # species interactions if all species were prey
-    if lv_invader == 0:
-        A = (alpha_max_inv*alpha_max[1]
-            *np.exp(-(loc[0,:,np.newaxis] - loc[1])**2/2/sig[0]**2))
-
-        # add effects of predator on prey
-        if defended_inv:
-            A[:, level == 1] = 0
-        else:
-            A[:, level == 1] = (alpha_max[1]
-                    *np.exp(-(loc[0,:,np.newaxis]-loc[1])**2/2/sig[1]**2))[:,level == 1]
-    else:
-        return
-
-    mu = mu_max*np.exp(-loc**2/2/omega**2) - ms[0]
-    return A, mu        
-
-def compute_LV_from_traits(loc, level = None, sig = None,
-                           alpha_max = None, omega = omega,
-                           mu_max = mu_max, ms = None, defended = None):
-        
-    # get data
-    if level is None:
-        level = np.zeros(len(loc))
-    if sig is None:
-        sig = np.where(level, sig)
-    if alpha_max is None:
-        alpha_max = np.where(level, alpha_max)
-    if defended is None:
-        defended = np.full(len(loc), False)
-    if ms is None:
-        ms = np.where(level, ms)
-    
-    
-    id_prey = np.where(level == 0)[0]
-    id_pred = np.where(level == 0)[1]
-    
-    # species interaction if all species were prey
-    A = (alpha_max[:,np.newaxis]*alpha_max
-            *np.exp(-(loc[:,np.newaxis] - loc)**2/2/sig**2))
-    
-    
-    # effect of predator on prey
-    A[id_prey[:,np.newaxis], id_pred] = (alpha_max
-                    *np.exp(-(loc[id_prey, np.newaxis]-loc)**2/2/sig**2))[:,id_pred]
-
-    # some species might be protected against predation
-    A[defended[:,np.newaxis], id_pred] = 0         
-    
-    # effect of prey on predator
-    A[id_pred[:,np.newaxis], id_prey] = -A[id_prey[:,np.newaxis], id_pred].T 
-    
-    # predators don't interact with each other
-    A[id_pred[:,np.newaxis], id_pred] = 0
-    
-    # compute the intrinsic growth rates
-    mu = mu_max*np.exp(-loc**2/2/omega**2) - ms
-    
-    # defended species have reduced intrinsic growth rates
-    mu[defended] *= 0.9
-    mu[id_pred] = -ms[id_pred] 
-    
-    return mu, np.round(A,8)
-    
-
 def compute_LV_param(species_id, i = 0, pres = [0,1]):
     
     # interaction matrix
@@ -301,30 +225,12 @@ def community_assembly(species_id, pr = True):
     
 
 if __name__ == "__main__":
-    def_specs["mu_red"] = 0.95
-    def_specs["pred_red"] = 0
-    species_id = generate_species(2, 5000, p_defended=0.5, def_specs = def_specs)
-    
-    species_id["level"][0,:3] = [0,0,1]
-    species_id["loc"][0,:3] = [-0.5,0.5,0]
-    species_id["defended"][0,:3] = [False, False, True]
-    
-    
-    
-    
+    species_id = generate_species(2, 5000)
     present, equi_all, surv = community_assembly(species_id, pr = False)
 
-    
-    """np.savez("Data_LV_reference.npz", **species_id, equi_all = equi_all,
-             surv = surv, present = present)"""
     import functions_for_plotting as fp
     import matplotlib.pyplot as plt
     
     fig, ax = plt.subplots(4,3, sharex = True, sharey = "row", figsize = (10,10))
     fp.plot_richness(ax[0], surv, species_id)
     fp.plot_traits(ax[1,:2], surv, species_id)
-    #fp.plot_traits(ax[2,:2], surv, species_id)
-    #plot_invasion_prob(ax[-1,-1], surv, species_id)
-    
-    #fp.plot_mean_traits(ax[1,-1], surv, species_id, 0)
-    #fp.plot_mean_traits(ax[2,-1], surv, species_id, 1)

@@ -23,7 +23,7 @@ for i in range(2):
     # remove speceis who are not present
     traits[~surv] = np.nan
     traits = np.sort(traits, axis = -1)[...,:max_richness]
-    """
+    
     # compute trait differences
     trait_diffs = traits[...,1:]-traits[...,:-1]
     
@@ -40,7 +40,7 @@ for i in range(2):
     diff_ref = ref[..., 1:] - ref[...,:-1]
     
     ax[0,i].plot(time, np.nanpercentile(diff_ref, [1,25, 50, 75, 99], axis = (0,-1)).T,
-             color = "b", alpha = 0.5)"""
+             color = "b", alpha = 0.5)
     
     # plot trait mean over time
     ax[0,i].plot(time, np.nanpercentile(np.nanmean(traits, axis = -1), [25,50,75], axis = 0).T,

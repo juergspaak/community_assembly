@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-"""
+
 path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
 data = np.load(path  + "data_LV_assembly_predators.npz")
 data = {**data}
@@ -11,7 +11,8 @@ years = np.arange(data["present"].shape[1])
 
 
 surv = data["equi_all"]>0
-persistence_length = np.sum(data["present"], axis = 1)"""
+persistence_length = np.sum(data["present"], axis = 1)
+
 """
 path = ""
 data = np.load(path  + "data_LV_assembly_predators.npz")

@@ -1,7 +1,5 @@
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-
 
 path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
 file = "BioTIMEQuery_24_06_2021.csv"
