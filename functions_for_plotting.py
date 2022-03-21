@@ -9,10 +9,15 @@ def plot_traits(axc, surv, species_id):
     for i, a in enumerate(axc):
         for y in years[:-1]:
             # does this species survive for a certain time?
-            if surv[i,:,y].any():
+            value = species_id["level"][i,y] + 2*(1-species_id["level"][i,y])*species_id["defended"][i,y]
+            if np.sum(surv[i,:,y])==1:
+                a.plot(years[surv[i,:,y]],
+                       np.repeat(species_id["loc"][i,y], np.sum(surv[i,:,y]))
+                       ,'.', color = colors[value])
+            elif np.sum(surv[i,:,y])>1:
                 a.plot(years[surv[i,:,y]],
                        np.repeat(species_id["loc"][i,y], np.sum(surv[i,:,y])),
-                       colors[species_id["level"][i,y]])
+                       color = colors[value])
                 
 def plot_mean_traits(axc, surv, species_id, level):
     years = np.arange(surv.shape[-2])
@@ -70,7 +75,7 @@ def plot_persistence_time(axc, surv, species_id, cutoff = 50
     axc.semilogy()
     
     
-if __name__ == "__main__":
+if False and __name__ == "__main__":
     data = np.load("Data_LV_reference.npz", allow_pickle = True)
     species_id = {**data}
     surv = data["surv"]

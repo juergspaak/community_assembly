@@ -10,9 +10,12 @@ path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
 # load prey only data
 
 omega = 3
-species_id = af.generate_species(2,10000, omega = omega, ms = [0.01,0.5],
+species_id = af.generate_species(2,5000, omega = omega, ms = [0.01,0.5],
                                  sigs = [0.5,0.2], level = [1,2],
-                                 mu_max = 1.2)
+                                 mu_max = 1.2, p_defended = 0.5)
+
+species_id = af.generate_species(2, 5000, p_defended = 0.05)
+    
 #species_id = af.generate_species(50,1000)
     
 present, equi_all, surv = af.community_assembly(species_id)
@@ -32,7 +35,7 @@ com = 1
 surv = d_free["equi_all"][com]>0
 time = np.arange(d_free["equi_all"].shape[1])
 n_spec = d_free["loc"].shape[1]
-tresh = 9000
+tresh = 0
 time = time[tresh:]
 for i in range(n_spec):
     pres = surv[tresh:,i]
@@ -56,8 +59,9 @@ persistence_per_species = 1.0*np.sum(d_free["equi_all"]>0, axis = 1)
 persistence_per_species[persistence_per_species == 0] = np.nan
 persistence_per_species[d_free["level"] == 1] = np.nan
 
-plt.hist(np.log(persistence_per_species[:,500:-200]).flatten(), bins = 20)
-a, b = 100, 200
+
+a, b = 500, 500
+ax[1,1].hist(np.log(persistence_per_species[:,a:-b]).flatten(), bins = 20)
 for i in range(n_bins):
     # only take species that arrived in the middle time, i.e. extinciont actually observed
     persistence_time[i] = np.nanmean(persistence_per_species[:,a:-b][trait_id[:,a:-b] == i])
@@ -68,6 +72,13 @@ ax[0,1].plot(bin_locations, persistence_time, 'b.')
 ax[0,1].set_xlabel("Trait location")
 ax[0,1].set_ylabel("Persistence time")
 ax[0,1].set_ylim([0,None])
+
+# plot persistence time defended
+ax[1,0].hist(np.log(persistence_per_species[:,a:-b])[species_id["defended"][:,a:-b]]
+             , bins = 20, density = True)
+ax[1,0].hist(np.log(persistence_per_species[:,a:-b])[~species_id["defended"][:,a:-b]]
+             , bins = 20, alpha = 0.5, label = "undefended", density = True)
+ax[1,0].legend()
 
 fig.tight_layout()
 fig.savefig("Figure_satelitte.pdf")

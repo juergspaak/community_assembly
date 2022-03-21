@@ -5,7 +5,7 @@ import warnings
 
 from scipy.stats import spearmanr, pearsonr
 
-"""
+
 path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
 presences = np.load(path + "biotime_converted.npz")
 

@@ -4,10 +4,26 @@ from itertools import combinations
 def LV_model(t, N, A, mu):
     return N*(mu-A.dot(N))
 
-def generate_species(n_coms = 200, years = 800, locs = np.zeros(3),
-                     sig_locs = None, sigs = [1, .3],
-                     alpha_max = [1, 1], omega = 2, mu_max = 1,
-                     ms = [.1, .1], level = [0.5, 0.5]):
+# default traits
+sigs = np.array([1, 0.8])
+alpha_max = np.array([1.0,1.0])
+omega = 2
+mu_max = 1
+ms = np.array([.1,.1])
+
+def_specs = {
+    "alpha_max_red": 1,
+    "sig_red": 1,
+    "m_red": 1,
+    "pred_red": 1,
+    "mu_red": 1,
+    "pred_niche": 1}
+
+def generate_species(n_coms = 200, years = 800, locs = np.zeros(2),
+                     sig_locs = None, sigs = sigs,
+                     alpha_max = alpha_max, omega = omega, mu_max = mu_max,
+                     ms = ms, level = [0.5, 0.5],
+                     p_defended = 0, def_specs = def_specs):
     
     # choose random trait values such that species cover all trait space
     if sig_locs is None:
@@ -25,7 +41,12 @@ def generate_species(n_coms = 200, years = 800, locs = np.zeros(3),
               # morality rate
               "m": np.array([np.full(com, m) for m in ms]),
               # trophic level
-              "level": np.random.choice(np.arange(2), p = level, size = com)}
+              "level": np.random.choice(np.arange(2), p = level, size = com),
+              # whether basal species are defended
+              "defended": np.random.choice([False, True],
+                                    p = [1 - p_defended, p_defended],
+                                    size = com),
+              "def_specs": def_specs}
     
     # potentially change location and variation of trophic levels
     for i in range(len(level)):
@@ -39,22 +60,60 @@ def generate_species(n_coms = 200, years = 800, locs = np.zeros(3),
     species_id["omega"] = omega
     species_id["mu_max"] = mu_max
     
+    # alter certain traits of defended species
+    def_basal = species_id["defended"] & (species_id["level"] == 0)
+    for trait in ["alpha_max", "sig", "m"]:
+        species_id[trait][0,def_basal] *= def_specs[trait + "_red"]
+    
     return species_id
 
 ###############################################################################
 # one-dimensional resource axis
 
-def compute_LV_param(species_id, i = 0, pres = [0,1]):
-    # interaction matrix
-    A = np.zeros((np.sum(pres), np.sum(pres)))
+def LV_asymetric(loc, level, sig, alpha_max = alpha_max,
+                 defended_res = None, alpha_max_inv = None,
+                 omega = omega, mu_max = mu_max, ms = ms, 
+                 lv_invader = 0, defended_inv = False):
     
+    if alpha_max_inv is None:
+        alpha_max_inv = alpha_max[1] if lv_invader else alpha_max[0]
+    
+    # species interactions if all species were prey
+    if lv_invader == 0:
+        A = (alpha_max_inv*alpha_max[1]
+            *np.exp(-(loc[0,:,np.newaxis] - loc[1])**2/2/sig[0]**2))
+
+        # add effects of predator on prey
+        if defended_inv:
+            A[:, level == 1] = 0
+        else:
+            A[:, level == 1] = (alpha_max[1]
+                    *np.exp(-(loc[0,:,np.newaxis]-loc[1])**2/2/sig[1]**2))[:,level == 1]
+    else:
+        return
+
+    mu = mu_max*np.exp(-loc**2/2/omega**2) - ms[0]
+    return A, mu        
+
+def compute_LV_from_traits(loc, level = None, sig = None,
+                           alpha_max = None, omega = omega,
+                           mu_max = mu_max, ms = None, defended = None):
+        
     # get data
-    level = species_id["level"][i,pres]
-    loc = species_id["loc"][i, pres]
-    sig = species_id["sig"][level, i, pres]
-    alpha_max = species_id["alpha_max"][level, i, pres]
-    id_prey = np.arange(len(loc))[species_id["level"][i,pres] == 0]
-    id_pred = np.arange(len(loc))[species_id["level"][i,pres] == 1]
+    if level is None:
+        level = np.zeros(len(loc))
+    if sig is None:
+        sig = np.where(level, sig)
+    if alpha_max is None:
+        alpha_max = np.where(level, alpha_max)
+    if defended is None:
+        defended = np.full(len(loc), False)
+    if ms is None:
+        ms = np.where(level, ms)
+    
+    
+    id_prey = np.where(level == 0)[0]
+    id_pred = np.where(level == 0)[1]
     
     # species interaction if all species were prey
     A = (alpha_max[:,np.newaxis]*alpha_max
@@ -63,7 +122,56 @@ def compute_LV_param(species_id, i = 0, pres = [0,1]):
     
     # effect of predator on prey
     A[id_prey[:,np.newaxis], id_pred] = (alpha_max
-                    *np.exp(-(loc[id_prey, np.newaxis]-loc)**2/2/sig**2))[:,id_pred]          
+                    *np.exp(-(loc[id_prey, np.newaxis]-loc)**2/2/sig**2))[:,id_pred]
+
+    # some species might be protected against predation
+    A[defended[:,np.newaxis], id_pred] = 0         
+    
+    # effect of prey on predator
+    A[id_pred[:,np.newaxis], id_prey] = -A[id_prey[:,np.newaxis], id_pred].T 
+    
+    # predators don't interact with each other
+    A[id_pred[:,np.newaxis], id_pred] = 0
+    
+    # compute the intrinsic growth rates
+    mu = mu_max*np.exp(-loc**2/2/omega**2) - ms
+    
+    # defended species have reduced intrinsic growth rates
+    mu[defended] *= 0.9
+    mu[id_pred] = -ms[id_pred] 
+    
+    return mu, np.round(A,8)
+    
+
+def compute_LV_param(species_id, i = 0, pres = [0,1]):
+    
+    # interaction matrix
+    A = np.zeros((np.sum(pres), np.sum(pres)))
+    
+    # get data
+    level = species_id["level"][i,pres]
+    loc = species_id["loc"][i, pres]
+    sig = species_id["sig"][level, i, pres]
+    alpha_max = species_id["alpha_max"][level, i, pres]
+    id_prey = np.where(species_id["level"][i,pres] == 0)[0]
+    id_pred = np.where(species_id["level"][i,pres] == 1)[0]
+    
+    defended = np.where(species_id["defended"][i, pres])[0]
+    
+    # species interaction if all species were prey
+    sig_basal = np.sqrt(sig[:,np.newaxis]**2 + sig**2)
+    A = (alpha_max[:,np.newaxis]*alpha_max
+            *np.exp(-(loc[:,np.newaxis] - loc)**2/2/sig_basal**2))
+    
+    # effect of predator on prey
+    # defended species have reduced visibility for predators
+    red_niche_def = np.where(species_id["defended"][i, pres],
+                             species_id["def_specs"]["pred_niche"], 1)
+    A[id_prey[:,np.newaxis], id_pred] = (alpha_max
+                    *np.exp(-(loc[id_prey, np.newaxis]-loc)**2/2/sig**2/red_niche_def))[:,id_pred]
+
+    # some species might be protected against predation
+    A[defended[:,np.newaxis], id_pred] *= species_id["def_specs"]["pred_red"]        
     
     # effect of prey on predator
     A[id_pred[:,np.newaxis], id_prey] = -A[id_prey[:,np.newaxis], id_pred].T 
@@ -73,11 +181,10 @@ def compute_LV_param(species_id, i = 0, pres = [0,1]):
     
     # compute the intrinsic growth rates
     mu = species_id["mu_max"]*np.exp(-loc**2/2/species_id["omega"]**2) - species_id["m"][0, i, pres]
-    mu += species_id["mu_max"]*np.exp(-loc**2) - species_id["m"][0, i, pres]
-    mu[id_pred] = -species_id["m"][1, i, pres][id_pred]
     
-    
-   
+    # defended species have reduced intrinsic growth rates
+    mu[defended] *= species_id["def_specs"]["mu_red"]
+    mu[id_pred] = -species_id["m"][1, i, pres][id_pred] 
     
     return mu, np.round(A,8)
 
@@ -150,7 +257,7 @@ def community_equilibrium(mu, A):
     print("A", A)
     raise ValueError
 
-def community_assembly(species_id):
+def community_assembly(species_id, pr = True):
     n_coms, years = species_id["loc"].shape
 
     present = np.full((n_coms, years+1, years), False, dtype = bool)
@@ -164,7 +271,8 @@ def community_assembly(species_id):
         ind_spec = np.arange(1)
         #equi_all[i,0,ind_spec] = mu[i,0]/A[i,0,0]
         equi = 0
-        print(i)
+        if pr:
+            print(i)
         for j in range(years):
             # get species interactions
             mu, A = compute_LV_param(species_id, i, present[i,j])
@@ -185,15 +293,27 @@ def community_assembly(species_id):
             equi_all[i,j, ind_spec] = equi
             present[i, j+1, ind_spec] = True
         equi_all[i,-1, ind_spec] = equi
-        print(i, np.sum((equi_all[i, -1]>0) & (species_id["level"][i] == 0)),
+        if pr: 
+            print(i, np.sum((equi_all[i, -1]>0) & (species_id["level"][i] == 0)),
               np.sum((equi_all[i,-1]>0) & (species_id["level"][i] == 1)))
     
     return present, equi_all, equi_all>0
+    
 
 if __name__ == "__main__":
-    species_id = generate_species(10, 1000)
+    def_specs["mu_red"] = 0.95
+    def_specs["pred_red"] = 0
+    species_id = generate_species(2, 5000, p_defended=0.5, def_specs = def_specs)
     
-    present, equi_all, surv = community_assembly(species_id)
+    species_id["level"][0,:3] = [0,0,1]
+    species_id["loc"][0,:3] = [-0.5,0.5,0]
+    species_id["defended"][0,:3] = [False, False, True]
+    
+    
+    
+    
+    present, equi_all, surv = community_assembly(species_id, pr = False)
+
     
     """np.savez("Data_LV_reference.npz", **species_id, equi_all = equi_all,
              surv = surv, present = present)"""
