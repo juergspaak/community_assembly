@@ -19,6 +19,21 @@ def_specs = {
     "mu_red": 1,
     "pred_niche": 1}
 
+n_invs = 101
+species_id_invader_basal = {"level": np.zeros(n_invs),
+                  "loc": np.linspace(-3,3,n_invs),
+                  "sig": np.full(n_invs, sigs[0]),
+                  "alpha_max": np.full(n_invs, alpha_max[0]),
+                  "m": np.full(n_invs, ms[0]),
+                  "defended": np.full(n_invs, False, dtype = bool)}
+
+species_id_invader_pred = {"level": np.ones(n_invs),
+                  "loc": np.linspace(-3,3,n_invs),
+                  "sig": np.full(n_invs, sigs[1]),
+                  "alpha_max": np.full(n_invs, alpha_max[1]),
+                  "m": np.full(n_invs, ms[1]),
+                  "defended": np.full(n_invs, False, dtype = bool)}
+
 def generate_species(n_coms = 200, years = 800, locs = np.zeros(2),
                      sig_locs = None, sigs = sigs,
                      alpha_max = alpha_max, omega = omega, mu_max = mu_max,
@@ -67,20 +82,12 @@ def generate_species(n_coms = 200, years = 800, locs = np.zeros(2),
     
     return species_id
 
-def compute_LV_param(species_id, i = 0, pres = [0,1]):
+def compute_LV_from_traits(level, loc, sig, alpha_max, m, defended,
+                           def_specs = def_specs, omega = omega,
+                           mu_max = mu_max):
     
-    # interaction matrix
-    A = np.zeros((np.sum(pres), np.sum(pres)))
-    
-    # get data
-    level = species_id["level"][i,pres]
-    loc = species_id["loc"][i, pres]
-    sig = species_id["sig"][level, i, pres]
-    alpha_max = species_id["alpha_max"][level, i, pres]
-    id_prey = np.where(species_id["level"][i,pres] == 0)[0]
-    id_pred = np.where(species_id["level"][i,pres] == 1)[0]
-    
-    defended = np.where(species_id["defended"][i, pres])[0]
+    id_prey = np.where(level == 0)[0]
+    id_pred = np.where(level == 1)[0]
     
     # species interaction if all species were prey
     sig_basal = np.sqrt(sig[:,np.newaxis]**2 + sig**2)
@@ -89,13 +96,13 @@ def compute_LV_param(species_id, i = 0, pres = [0,1]):
     
     # effect of predator on prey
     # defended species have reduced visibility for predators
-    red_niche_def = np.where(species_id["defended"][i, pres],
-                             species_id["def_specs"]["pred_niche"], 1)
+    red_niche_def = np.where(defended, def_specs["pred_niche"], 1)
+    id_def = np.where(defended)[0]
     A[id_prey[:,np.newaxis], id_pred] = (alpha_max
                     *np.exp(-(loc[id_prey, np.newaxis]-loc)**2/2/sig**2/red_niche_def))[:,id_pred]
 
     # some species might be protected against predation
-    A[defended[:,np.newaxis], id_pred] *= species_id["def_specs"]["pred_red"]        
+    A[id_def[:,np.newaxis], id_pred] *= def_specs["pred_red"]        
     
     # effect of prey on predator
     A[id_pred[:,np.newaxis], id_prey] = -A[id_prey[:,np.newaxis], id_pred].T 
@@ -104,13 +111,55 @@ def compute_LV_param(species_id, i = 0, pres = [0,1]):
     A[id_pred[:,np.newaxis], id_pred] = 0
     
     # compute the intrinsic growth rates
-    mu = species_id["mu_max"]*np.exp(-loc**2/2/species_id["omega"]**2) - species_id["m"][0, i, pres]
+    mu = mu_max*np.exp(-loc**2/2/omega**2) - m
     
     # defended species have reduced intrinsic growth rates
-    mu[defended] *= species_id["def_specs"]["mu_red"]
-    mu[id_pred] = -species_id["m"][1, i, pres][id_pred] 
+    mu[defended] *= def_specs["mu_red"]
+    mu[id_pred] = -m[id_pred] 
     
     return mu, np.round(A,8)
+
+def compute_LV_param(species_id, i = 0, pres = [0,1]):
+    
+    # get data
+    level = species_id["level"][i,pres]
+    loc = species_id["loc"][i, pres]
+    sig = species_id["sig"][level, i, pres]
+    alpha_max = species_id["alpha_max"][level, i, pres]
+    m = species_id["m"][0, i, pres]
+    
+    defended = species_id["defended"][i, pres]
+    
+    return compute_LV_from_traits(level, loc, sig, alpha_max, m, defended,
+                                  species_id["def_specs"],
+                                  omega = species_id["omega"],
+                                  mu_max = species_id["mu_max"])
+
+def invasion_success(species_id, i, equi, species_id_invader):
+    
+    pres = np.where(equi != 0)[0]
+    
+    level = species_id["level"][i,pres]
+    loc = np.append(species_id["loc"][i, pres],
+                    species_id_invader["loc"])
+    sig = np.append(species_id["sig"][level, i, pres],
+                    species_id_invader["sig"])
+    alpha_max = np.append(species_id["alpha_max"][level, i, pres],
+                          species_id_invader["alpha_max"])
+    m = np.append(species_id["m"][0, i, pres], species_id_invader["m"])
+    level = np.append(species_id["level"][i,pres],
+                      species_id_invader["level"])
+    
+    defended = np.append(species_id["defended"][i, pres],
+                         species_id_invader["defended"])
+    
+    mu, A = compute_LV_from_traits(level, loc, sig, alpha_max, m, defended,
+                                  species_id["def_specs"],
+                                  omega = species_id["omega"])
+    equi = np.append(equi[pres], np.zeros(len(species_id_invader["level"])))
+    inv = mu - A.dot(equi)
+    return inv, loc
+    return inv[len(species_id["level"][i,pres]):], loc[len(species_id["level"][i,pres]):]
 
 def community_equilibrium(mu, A):
     # compute maximum subcommunity that coexists
@@ -224,13 +273,13 @@ def community_assembly(species_id, pr = True):
     return present, equi_all, equi_all>0
     
 
-if __name__ == "__main__":
-    species_id = generate_species(2, 5000)
+if __name__ == "__main__" and False:
+    species_id = generate_species(2, 200)
     present, equi_all, surv = community_assembly(species_id, pr = False)
 
     import functions_for_plotting as fp
     import matplotlib.pyplot as plt
     
-    fig, ax = plt.subplots(4,3, sharex = True, sharey = "row", figsize = (10,10))
+    fig, ax = plt.subplots(2,2, sharex = True, sharey = "row", figsize = (10,10))
     fp.plot_richness(ax[0], surv, species_id)
-    fp.plot_traits(ax[1,:2], surv, species_id)
+    fp.plot_traits(ax[1], surv, species_id)

@@ -2,8 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import warnings
+from matplotlib.cm import Set1
 
-from scipy.stats import spearmanr, pearsonr
+colors = Set1(np.linspace(0,1,9))
 
 # load simulations
 path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
@@ -27,7 +28,23 @@ study_ids = presences["study_ids"]
 study_ids = study_ids[[presences[study_id].shape[0]>=40
                       for study_id in study_ids]]
 
-fig, ax = plt.subplots(4,3,figsize = (10,10), sharey = "row")
+path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
+meta_data = "BioTIMEMetadata_24_06_2021.csv"
+meta_data = pd.read_csv(path + meta_data, usecols=np.arange(27),
+                            encoding = 'unicode_escape')
+organisms = [meta_data[meta_data.STUDY_ID == int(sid)].TAXA.values[0] for sid in study_ids]
+
+keys = ["Birds","Marine\ninvertebrates",
+                        "Terrestrial\nplants", "Fish", "Other"]
+colors = {key: colors[i] for i, key in enumerate(keys)}
+colors["Mammals"] = colors["Other"]
+colors["Benthos"] = colors["Other"]
+colors["All"] = colors["Other"]
+colors["Marine invertebrates"] = colors["Marine\ninvertebrates"]
+colors["Terrestrial plants"] = colors["Terrestrial\nplants"]
+
+
+fig, ax = plt.subplots(4,3,figsize = (12,12), sharey = "row")
 persist_max = 100
 bins = np.arange(1, 100, 5)
 
@@ -99,23 +116,28 @@ ax[3,1].plot(bins[:-1], hist, 'r')
 ##############################################################################
 # biotime data
 
-alpha = 0.2
+alpha = 0.5
 for study_id in study_ids:
     pres = presences[study_id]
+    col = colors[meta_data[meta_data.STUDY_ID == int(study_id)].TAXA.values[0]]
     ax[0,2].plot(presences["year_{}".format(study_id)],
-                 np.sum(pres, axis = 1), 'k-', alpha = alpha)
+                 np.sum(pres, axis = 1), '-', alpha = alpha, color = col)
     invasion = np.sum(pres[1:] & ~pres[:-1], axis = 1)/np.sum(pres[1:], axis = 1)
     ax[1,2].plot(presences["year_{}".format(study_id)][1:],
-                 invasion, 'k', alpha = alpha)
+                 invasion, color = col, alpha = alpha)
     extinction = np.sum(pres[:-1] & ~pres[1:], axis = 1)/np.sum(pres[:-1], axis = 1)
     ax[2,2].plot(presences["year_{}".format(study_id)][:-1],
-                 extinction, 'k', alpha = alpha)
+                 extinction, color = col, alpha = alpha)
     persistence_time = np.nansum(presences[study_id], axis = 0)
     hist, bins = np.histogram(persistence_time, bins = bins,
                               density = True)
     #hist[bins[:-1]>=len(pres)] = 0
-    ax[3,2].plot(bins[:-1], hist, 'k.', alpha = 0.2)
+    ax[3,2].plot(bins[:-1], hist, '.', color = col, alpha = alpha)
 
+for key in keys:
+    ax[3,2].plot(np.nan, np.nan, color = colors[key], label = key)
+ax[3,2].legend(ncol = 2, fontsize = 10)
+ax[3,2].set_ylim([1e-3, 8])
 
 ##############################################################################
 # add layout
@@ -153,4 +175,5 @@ ax[0,2].set_title("BioTime data")
 
 fig.tight_layout()
 fig.savefig("Figure_biotime_examples.pdf")
+#"""
 
