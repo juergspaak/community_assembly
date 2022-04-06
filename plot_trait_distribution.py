@@ -30,7 +30,7 @@ ax[1,0].set_ylabel("Species traits")
 ##############################################################################
 # trait distribution
 x = 1.2*np.linspace(*ax[0,0].get_ylim(), 1000)
-for j, bw in enumerate([0.5, 0.2]):
+for j, bw in enumerate([0.5, 0.25]):
     for t in np.arange(200,500,10):
     
         lv = species_id["level"][com, surv[com, t]]
@@ -54,6 +54,9 @@ for a in ax[:,1:].flatten():
     a.set_ylabel("Frequency")
 for a in ax[1,1:].flatten():
     a.set_xlabel("Species traits")
+    
+for i,a in enumerate(ax.flatten()):
+    a.set_title("ABCDEF"[i], loc = "left")
 
 fig.tight_layout()
 fig.savefig("Figure_trait_distribution.pdf")

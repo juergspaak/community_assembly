@@ -154,7 +154,7 @@ def invasion_success(species_id, i, equi, species_id_invader):
                          species_id_invader["defended"])
     
     mu, A = compute_LV_from_traits(level, loc, sig, alpha_max, m, defended,
-                                  species_id["def_specs"],
+                                  species_id["def_specs"], mu_max = species_id["mu_max"],
                                   omega = species_id["omega"])
     equi = np.append(equi[pres], np.zeros(len(species_id_invader["level"])))
     inv = mu - A.dot(equi)
@@ -271,10 +271,36 @@ def community_assembly(species_id, pr = True):
               np.sum((equi_all[i,-1]>0) & (species_id["level"][i] == 1)))
     
     return present, equi_all, equi_all>0
+
+def invasion_scheme(mu, A):
+    n = len(mu)
+    counter = 0
+    equi_all = np.zeros(( 2**n, n))
+    r_i = np.full(equi_all.shape, np.nan)
+    # compute all possible equilibria
+    for n_spec in range(1, n+1):
+        for comb in np.array(list(combinations(range(n), n_spec))):
+            counter += 1
+            try:
+                equi = np.linalg.solve(A[comb[:, np.newaxis], comb], mu[comb])
+            except np.linalg.LinAlgError:
+                equi_all[counter] = np.nan
+                continue # not a stable equilibrium
+            if (equi<0).any():
+                equi_all[counter] = np.nan
+                continue # not a stable equilibrium
+            equi_all[counter, comb] = equi
+    equi_all[0] = 0
+    equi_all = equi_all[np.all(np.isfinite(equi_all), axis = 1)]
+    r_i = mu - np.nansum(A*equi_all[:,np.newaxis], axis = -1)
+    
+    r_i = np.round(r_i, 10)
+    r_i = r_i[np.isfinite(r_i[:,0])] # remove communities that are not present
+    return r_i
     
 
-if __name__ == "__main__" and False:
-    species_id = generate_species(2, 200)
+if __name__ == "__main__":
+    species_id = generate_species(2, 200, omega = 2)
     present, equi_all, surv = community_assembly(species_id, pr = False)
 
     import functions_for_plotting as fp
@@ -283,3 +309,5 @@ if __name__ == "__main__" and False:
     fig, ax = plt.subplots(2,2, sharex = True, sharey = "row", figsize = (10,10))
     fp.plot_richness(ax[0], surv, species_id)
     fp.plot_traits(ax[1], surv, species_id)
+
+    fig = plt.figure()

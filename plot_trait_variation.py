@@ -15,9 +15,6 @@ except FileNotFoundError:
     
     np.savez("Data_average_trait_distance.npz", **species_id,
              surv = surv)
-    
-
-
 
 time = np.arange(surv.shape[1])
 
@@ -25,6 +22,8 @@ fig, ax = plt.subplots(2,2, sharex = True, figsize = (9,9), sharey = "row")
 
 fac = [np.sqrt(2), np.sqrt(2)]
 
+col = "br"
+col_ref = "y"
 for i in range(2):
     traits = species_id["loc"].copy()
     
@@ -43,26 +42,27 @@ for i in range(2):
         # plot trait mean over time
         percentiles = np.nanpercentile(np.nanmean(traits, axis = -1),
                                        percents, axis = 0)
-        ax[0,i].plot(time, percentiles[1], color = "r", label = "Simulation")
-        ax[0,i].fill_between(time, percentiles[0], percentiles[2], color = "r", alpha = 0.5)
+        ax[0,i].plot(time, percentiles[1], color = col[i], label = "Simulation")
+        ax[0,i].fill_between(time, percentiles[0], percentiles[2], color = col[i], alpha = 0.5)
         
         # compare to random draws
         percentiles = np.nanpercentile(np.nanmean(ref, axis = -1),
                                        percents, axis = 0)
-        ax[0,i].plot(time, percentiles[1], color = "b", label = "Random")
-        ax[0,i].fill_between(time, percentiles[0], percentiles[2], color = "b", alpha = 0.5)
+        ax[0,i].plot(time, percentiles[1], color = col_ref, label = "Random")
+        ax[0,i].fill_between(time, percentiles[0], percentiles[2], color = col_ref, alpha = 0.5)
         
         # plot trait variance over time
         percentiles = np.nanpercentile(np.nanvar(traits, axis = -1),
                                        percents, axis = 0)
-        ax[1,i].plot(time, percentiles[1], color = "r")
-        ax[1,i].fill_between(time, percentiles[0], percentiles[2], color = "r", alpha = 0.5)
+        ax[1,i].plot(time, percentiles[1], color = col[i])
+        ax[1,i].fill_between(time, percentiles[0], percentiles[2], color = col[i], alpha = 0.5)
         
         # compare to random draws
         percentiles = np.nanpercentile(np.nanvar(ref, axis = -1),
                                        percents, axis = 0)
-        ax[1,i].plot(time, percentiles[1], color = "b")
-        ax[1,i].fill_between(time, percentiles[0], percentiles[2], color = "b", alpha = 0.5)
+        ax[1,i].plot(time, percentiles[1], color = col_ref)
+        ax[1,i].fill_between(time, percentiles[0], percentiles[2],
+                             color = col_ref, alpha = 0.5)
     
 ax[0,0].set_title("Basal species")
 ax[0,1].set_title("Predator species")
@@ -77,4 +77,4 @@ ax[1,0].set_ylim([0, None])
 ax[0,0].legend()
 
 fig.tight_layout()
-fig.savefig("Figure_trait_differences.pdf")
+fig.savefig("Figure_trait_variation.pdf")

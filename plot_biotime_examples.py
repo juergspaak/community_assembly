@@ -2,17 +2,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import warnings
-from matplotlib.cm import Set1
 
-colors = Set1(np.linspace(0,1,9))
+from functions_for_plotting import biotime_colors as colors, keys
 
 # load simulations
 path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
 # load prey only data
 
 try:
-    
-    datas
+    d_prey
+    d_pred
 except NameError:
     d_prey = np.load(path + "data_LV_assembly.npz")
     d_pred = np.load(path + "data_LV_assembly_predators.npz")
@@ -21,32 +20,21 @@ except NameError:
 
 
 path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
-presences = np.load(path + "biotime_converted.npz")
+presences = np.load(path + "biotime_converted.npz", allow_pickle=True)
 
 study_ids = presences["study_ids"]
 # only work with long datasets
-study_ids = study_ids[[presences[study_id].shape[0]>=40
+study_ids = study_ids[[presences[study_id].shape[0]>=30
                       for study_id in study_ids]]
 
 path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
 meta_data = "BioTIMEMetadata_24_06_2021.csv"
 meta_data = pd.read_csv(path + meta_data, usecols=np.arange(27),
                             encoding = 'unicode_escape')
-organisms = [meta_data[meta_data.STUDY_ID == int(sid)].TAXA.values[0] for sid in study_ids]
 
-keys = ["Birds","Marine\ninvertebrates",
-                        "Terrestrial\nplants", "Fish", "Other"]
-colors = {key: colors[i] for i, key in enumerate(keys)}
-colors["Mammals"] = colors["Other"]
-colors["Benthos"] = colors["Other"]
-colors["All"] = colors["Other"]
-colors["Marine invertebrates"] = colors["Marine\ninvertebrates"]
-colors["Terrestrial plants"] = colors["Terrestrial\nplants"]
-
-
-fig, ax = plt.subplots(4,3,figsize = (12,12), sharey = "row")
+fig, ax = plt.subplots(4,3,figsize = (12,12))
 persist_max = 100
-bins = np.arange(1, 100, 5)
+bins = np.arange(1, 100, 2)
 
 ##############################################################################
 # case for prey only
@@ -73,7 +61,8 @@ ax[2,0].plot(time[:-1], np.mean(extinction, axis = 0), 'b')
 persistence_time = np.sum(surv[:,100:], axis = 1)
 hist, bins = np.histogram(persistence_time.flatten(), bins = bins,
                           density = True)
-ax[3,0].plot(bins[:-1], hist, 'b')
+ax[3,0].set_frame_on(False)
+ax[3,0].set_xticks([])
 
 ##############################################################################
 # case for prey and pred
@@ -118,18 +107,33 @@ ax[3,1].plot(bins[:-1], hist, 'r')
 
 alpha = 0.5
 for study_id in study_ids:
+    # load dataset, shape (years, species)
     pres = presences[study_id]
+    # get color of taxa
     col = colors[meta_data[meta_data.STUDY_ID == int(study_id)].TAXA.values[0]]
+    
+    # plot species richness
     ax[0,2].plot(presences["year_{}".format(study_id)],
                  np.sum(pres, axis = 1), '-', alpha = alpha, color = col)
+    # plot portion of invaders
     invasion = np.sum(pres[1:] & ~pres[:-1], axis = 1)/np.sum(pres[1:], axis = 1)
     ax[1,2].plot(presences["year_{}".format(study_id)][1:],
                  invasion, color = col, alpha = alpha)
+    # plot portion of extinctions
     extinction = np.sum(pres[:-1] & ~pres[1:], axis = 1)/np.sum(pres[:-1], axis = 1)
     ax[2,2].plot(presences["year_{}".format(study_id)][:-1],
                  extinction, color = col, alpha = alpha)
+    # plot persistence time
     persistence_time = np.nansum(presences[study_id], axis = 0)
-    hist, bins = np.histogram(persistence_time, bins = bins,
+    ext = pres[:-1] & ~pres[1:]
+    ext[-1] = 1 # include last time point for all communities
+    persist_total = np.cumsum(pres, axis = 0)
+    persistence_t = []
+    for i in range(pres.shape[1]):
+        temp = persist_total[1:, i][ext[:,i] == 1]
+        temp[1:] -= temp[:-1]
+        persistence_t.extend(temp)
+    hist, bins = np.histogram(persistence_t, bins = bins,
                               density = True)
     #hist[bins[:-1]>=len(pres)] = 0
     ax[3,2].plot(bins[:-1], hist, '.', color = col, alpha = alpha)
@@ -137,29 +141,49 @@ for study_id in study_ids:
 for key in keys:
     ax[3,2].plot(np.nan, np.nan, color = colors[key], label = key)
 ax[3,2].legend(ncol = 2, fontsize = 10)
-ax[3,2].set_ylim([1e-3, 8])
 
 ##############################################################################
 # add layout
 
-ax[3,0].semilogy()
-ax[0,0].semilogy()
+# y-ticks
+for i in range(3):
+    ax[0,i].set_ylim([1,200])
+    ax[0,i].semilogy()
+    ax[1,i].set_ylim([0,1])
+    ax[2,i].set_ylim([0,1])
+    ax[3,i].set_ylim([1e-3, 8])
+    
 
+for i in range(4):
+    for j in range(3):
+        if j == 0:
+            continue
+        ax[i,j].set_yticklabels([])
+
+ax[3,0].set_yticks([])
+ax[3,1].set_yticks([1e-3, 1e-2, 1e-1, 1])
+ax[3,1].semilogy()
+ax[3,2].semilogy()
+    
 ax[0,0].set_ylabel("Species richness")
 ax[1,0].set_ylabel("Proportion of invaders")
 ax[2,0].set_ylabel("Proportion of extinctions")
-ax[3,0].set_ylabel("Frequency")
+ax[3,1].set_ylabel("Frequency")
+
+
 
 # xlabel
 for a in ax[:-1].flatten():
     a.set_xlabel("Time")
 
-ax[3,0].set_xlabel("Persistence time")
 ax[3,1].set_xlabel("Persistence time")
 ax[3,2].set_xlabel("Persistence time")
 
-for i, a in enumerate(ax.flatten()):
+for i, a in enumerate(ax[:3].flatten()):
     a.set_title("ABCDEFGHIJKLMNOP"[i], loc = "left")
+
+ax[3,1].set_title("J", loc = "left")
+ax[3,2].set_title("K", loc = "left")
     
 for i, a in enumerate(ax[:3,:2].flatten()):
     a.set_xlim(time[[0,-1]])
