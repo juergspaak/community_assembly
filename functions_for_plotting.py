@@ -15,7 +15,7 @@ def plot_traits(axc, equi, species_id, plot_invasion = False):
     for i, a in enumerate(axc):
         for y in years[:-1]:
             # does this species survive for a certain time?
-            value = species_id["level"][i,y] + 2*(1-species_id["level"][i,y])*species_id["defended"][i,y]
+            value = species_id["level"][i,y]
             if np.sum(surv[i,:,y])==1:
                 a.scatter(years[surv[i,:,y]],
                        np.repeat(species_id["loc"][i,y], np.sum(surv[i,:,y]))
@@ -126,7 +126,7 @@ biotime_colors["Freshwater invertebrates"] = biotime_colors["Invertebrates"]
 biotime_colors["Terrestrial plants"] = biotime_colors["Terrestrial\nplants"]
 
 if __name__ == "__main__":
-    species_id = ap.generate_species(2, 5000, omega = 4, sigs = [3, 2])
+    species_id = ap.generate_species(2, 500, omega = 4, sigs = [3, 2])
     species_id["level"][:,:20] = 0
     present, equi_all, surv = ap.community_assembly(species_id, pr = False)
     plot_traits([plt.gca()], equi_all, species_id, plot_invasion=True)

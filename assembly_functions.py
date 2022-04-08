@@ -1,6 +1,8 @@
 import numpy as np
 from itertools import combinations
 
+from various_competition_kernels import compute_LV_from_traits_kernels
+
 def LV_model(t, N, A, mu):
     return N*(mu-A.dot(N))
 
@@ -11,34 +13,23 @@ omega = 2
 mu_max = 1
 ms = np.array([.1,.1])
 
-def_specs = {
-    "alpha_max_red": 1,
-    "sig_red": 1,
-    "m_red": 1,
-    "pred_red": 1,
-    "mu_red": 1,
-    "pred_niche": 1}
-
 n_invs = 101
 species_id_invader_basal = {"level": np.zeros(n_invs),
                   "loc": np.linspace(-3,3,n_invs),
                   "sig": np.full(n_invs, sigs[0]),
                   "alpha_max": np.full(n_invs, alpha_max[0]),
-                  "m": np.full(n_invs, ms[0]),
-                  "defended": np.full(n_invs, False, dtype = bool)}
+                  "m": np.full(n_invs, ms[0])}
 
 species_id_invader_pred = {"level": np.ones(n_invs),
                   "loc": np.linspace(-3,3,n_invs),
                   "sig": np.full(n_invs, sigs[1]),
                   "alpha_max": np.full(n_invs, alpha_max[1]),
-                  "m": np.full(n_invs, ms[1]),
-                  "defended": np.full(n_invs, False, dtype = bool)}
+                  "m": np.full(n_invs, ms[1])}
 
 def generate_species(n_coms = 200, years = 800, locs = np.zeros(2),
                      sig_locs = None, sigs = sigs,
                      alpha_max = alpha_max, omega = omega, mu_max = mu_max,
-                     ms = ms, level = [0.5, 0.5],
-                     p_defended = 0, def_specs = def_specs):
+                     ms = ms, level = [0.5, 0.5], kernel = False):
     
     # choose random trait values such that species cover all trait space
     if sig_locs is None:
@@ -57,11 +48,8 @@ def generate_species(n_coms = 200, years = 800, locs = np.zeros(2),
               "m": np.array([np.full(com, m) for m in ms]),
               # trophic level
               "level": np.random.choice(np.arange(2), p = level, size = com),
-              # whether basal species are defended
-              "defended": np.random.choice([False, True],
-                                    p = [1 - p_defended, p_defended],
-                                    size = com),
-              "def_specs": def_specs}
+              # competition kernel
+              "kernel": kernel}
     
     # potentially change location and variation of trophic levels
     for i in range(len(level)):
@@ -75,15 +63,9 @@ def generate_species(n_coms = 200, years = 800, locs = np.zeros(2),
     species_id["omega"] = omega
     species_id["mu_max"] = mu_max
     
-    # alter certain traits of defended species
-    def_basal = species_id["defended"] & (species_id["level"] == 0)
-    for trait in ["alpha_max", "sig", "m"]:
-        species_id[trait][0,def_basal] *= def_specs[trait + "_red"]
-    
     return species_id
 
-def compute_LV_from_traits(level, loc, sig, alpha_max, m, defended,
-                           def_specs = def_specs, omega = omega,
+def compute_LV_from_traits(level, loc, sig, alpha_max, m, omega = omega,
                            mu_max = mu_max):
     
     id_prey = np.where(level == 0)[0]
@@ -95,14 +77,8 @@ def compute_LV_from_traits(level, loc, sig, alpha_max, m, defended,
             *np.exp(-(loc[:,np.newaxis] - loc)**2/2/sig_basal**2))
     
     # effect of predator on prey
-    # defended species have reduced visibility for predators
-    red_niche_def = np.where(defended, def_specs["pred_niche"], 1)
-    id_def = np.where(defended)[0]
     A[id_prey[:,np.newaxis], id_pred] = (alpha_max
-                    *np.exp(-(loc[id_prey, np.newaxis]-loc)**2/2/sig**2/red_niche_def))[:,id_pred]
-
-    # some species might be protected against predation
-    A[id_def[:,np.newaxis], id_pred] *= def_specs["pred_red"]        
+                    *np.exp(-(loc[id_prey, np.newaxis]-loc)**2/2/sig**2))[:,id_pred]      
     
     # effect of prey on predator
     A[id_pred[:,np.newaxis], id_prey] = -A[id_prey[:,np.newaxis], id_pred].T 
@@ -113,8 +89,7 @@ def compute_LV_from_traits(level, loc, sig, alpha_max, m, defended,
     # compute the intrinsic growth rates
     mu = mu_max*np.exp(-loc**2/2/omega**2) - m
     
-    # defended species have reduced intrinsic growth rates
-    mu[defended] *= def_specs["mu_red"]
+    # mortality rate of predators
     mu[id_pred] = -m[id_pred] 
     
     return mu, np.round(A,8)
@@ -128,12 +103,16 @@ def compute_LV_param(species_id, i = 0, pres = [0,1]):
     alpha_max = species_id["alpha_max"][level, i, pres]
     m = species_id["m"][0, i, pres]
     
-    defended = species_id["defended"][i, pres]
-    
-    return compute_LV_from_traits(level, loc, sig, alpha_max, m, defended,
-                                  species_id["def_specs"],
+    if not species_id["kernel"]:
+        return compute_LV_from_traits(level, loc, sig, alpha_max, m,
                                   omega = species_id["omega"],
                                   mu_max = species_id["mu_max"])
+    
+    else:
+        return compute_LV_from_traits_kernels(level, loc, sig, alpha_max, m,
+                                  omega = species_id["omega"],
+                                  mu_max = species_id["mu_max"],
+                                  kernel = species_id["kernel"])
 
 def invasion_success(species_id, i, equi, species_id_invader):
     
@@ -150,11 +129,8 @@ def invasion_success(species_id, i, equi, species_id_invader):
     level = np.append(species_id["level"][i,pres],
                       species_id_invader["level"])
     
-    defended = np.append(species_id["defended"][i, pres],
-                         species_id_invader["defended"])
-    
-    mu, A = compute_LV_from_traits(level, loc, sig, alpha_max, m, defended,
-                                  species_id["def_specs"], mu_max = species_id["mu_max"],
+    mu, A = compute_LV_from_traits(level, loc, sig, alpha_max, m,
+                                   mu_max = species_id["mu_max"],
                                   omega = species_id["omega"])
     equi = np.append(equi[pres], np.zeros(len(species_id_invader["level"])))
     inv = mu - A.dot(equi)
@@ -299,7 +275,7 @@ def invasion_scheme(mu, A):
     return r_i
     
 
-if __name__ == "__main__":
+if False and __name__ == "__main__":
     species_id = generate_species(2, 200, omega = 2)
     present, equi_all, surv = community_assembly(species_id, pr = False)
 
@@ -309,5 +285,3 @@ if __name__ == "__main__":
     fig, ax = plt.subplots(2,2, sharex = True, sharey = "row", figsize = (10,10))
     fp.plot_richness(ax[0], surv, species_id)
     fp.plot_traits(ax[1], surv, species_id)
-
-    fig = plt.figure()
