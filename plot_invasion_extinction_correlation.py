@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from functions_for_plotting import biotime_colors, keys
-"""
+
 # load simulations
 path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
 # load prey only data
@@ -69,18 +69,18 @@ def inv_ext_correlation(pres):
 
 # compute correlation between invasion and extinction
 itera = 1000
-p_distribution = np.empty(itera)
-for study_id in meta_data.index:
+p_distribution = np.empty((len(meta_data), itera))
+for j, study_id in enumerate(meta_data.index):
     pres = presences[str(study_id)] == 1 # conversion to boolean
     
     meta_data.loc[study_id, "corr"] = inv_ext_correlation(pres)
     
     for i in range(itera):
         order = np.argsort(np.random.rand(len(pres)))
-        p_distribution[i] = inv_ext_correlation(pres[order])
+        p_distribution[j, i] = inv_ext_correlation(pres[order])
         
-    meta_data.loc[study_id, "p_value"] = np.sum(meta_data.loc[study_id, "corr"]>p_distribution)/itera
-    meta_data.loc[study_id, "rand_corr"] = np.mean(p_distribution)
+    meta_data.loc[study_id, "p_value"] = np.sum(meta_data.loc[study_id, "corr"]>p_distribution[j])/itera
+    meta_data.loc[study_id, "rand_corr"] = np.mean(p_distribution[j])
     
 #"""
 identities = [biotime_colors[key][0] for key in keys]
@@ -119,9 +119,26 @@ ax[1].set_xlabel("p-value of correlation")
 
 fig.savefig("Figure_ap_correlation.pdf")
 #"""
+##############################################################################
+# compare actual correlation with correlation based on randomness
 
+fig, ax = plt.subplots(5,5, sharex = True, sharey = True, figsize = (9,9))
+for i in range(len(ax)):
+    ax[i,0].set_ylabel("Frequency")
+    ax[-1,i].set_xlabel("Correlation")
 
+ax = ax.flatten()
+ind = np.argsort(1-meta_data.p_value.values)
 
+for i, a in enumerate(ax):
+    a.hist(p_distribution[ind[i]], bins = bins, color = biotime_colors[meta_data.TAXA.values[ind[i]]],
+           density = True)
+    a.axvline(meta_data["corr"].values[ind[i]], color = "r")
+    a.axvline(0, color = "grey")
+    a.set_title(meta_data.TAXA.values[ind[i]])
+    
+fig.tight_layout()
+fig.savefig("Figure_ap_comparison_correlatoin.pdf")
 
 
 
