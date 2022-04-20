@@ -8,7 +8,7 @@ def LV_model(t, N, A, mu):
 
 # default traits
 sigs = np.array([1, 0.8])
-alpha_max = np.array([1.0,1.0])
+alpha_max = np.array([1.0,10])
 omega = 2
 mu_max = 1
 ms = np.array([.1,.1])
@@ -81,7 +81,7 @@ def compute_LV_from_traits(level, loc, sig, alpha_max, m, omega = omega,
                     *np.exp(-(loc[id_prey, np.newaxis]-loc)**2/2/sig**2))[:,id_pred]      
     
     # effect of prey on predator
-    A[id_pred[:,np.newaxis], id_prey] = -A[id_prey[:,np.newaxis], id_pred].T 
+    A[id_pred[:,np.newaxis], id_prey] = -0.1*A[id_prey[:,np.newaxis], id_pred].T 
     
     # predators don't interact with each other
     A[id_pred[:,np.newaxis], id_pred] = 0

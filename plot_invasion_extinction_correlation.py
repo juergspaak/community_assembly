@@ -5,20 +5,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from functions_for_plotting import biotime_colors, keys
-
+"""
 # load simulations
 path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
 # load prey only data
-
-try:
-    d_prey
-    d_pred
-except NameError:
-    d_prey = np.load(path + "data_LV_assembly.npz")
-    d_pred = np.load(path + "data_LV_assembly_predators.npz")
-    d_prey = {key: d_prey[key] for key in d_prey.files}
-    d_pred = {key: d_pred[key] for key in d_pred.files}
-
 
 path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
 presences = np.load(path + "biotime_converted.npz")
@@ -38,8 +28,11 @@ meta_data["identity"] = [biotime_colors[key][0]
                          if key in biotime_colors.keys() else np.nan
                          for key in meta_data.TAXA]
 meta_data["corr"] = np.nan # store correlation between invasion and extinction
-meta_data["p_value"] = np.nan # p_value for correlation
+meta_data["p_value"] = np.nan # p_value for 
+meta_data["p_value_high_rich"] = np.nan # p_value for correlation for high richness
 meta_data["rand_corr"] = np.nan # correlation of perturbed data
+
+meta_data["include"] = True
 
 
 def inv_ext_correlation(pres):
@@ -69,18 +62,36 @@ def inv_ext_correlation(pres):
 
 # compute correlation between invasion and extinction
 itera = 1000
-p_distribution = np.empty((len(meta_data), itera))
+p_distribution = np.empty((2, len(meta_data), itera))
 for j, study_id in enumerate(meta_data.index):
     pres = presences[str(study_id)] == 1 # conversion to boolean
+    richness = np.sum(pres, axis = 1)
+    
+    # for exclusion of communities with to strong fluctuations
+    if min(richness)/max(richness)<0.25:
+        meta_data.loc[study_id, "include"] = False
+    
+    # for exclusion of timepoints with very low species richness
+    ind_high_rich = richness>=5
     
     meta_data.loc[study_id, "corr"] = inv_ext_correlation(pres)
+    meta_data.loc[study_id, "corr_high_rich"] = inv_ext_correlation(pres[ind_high_rich])
+    
     
     for i in range(itera):
         order = np.argsort(np.random.rand(len(pres)))
-        p_distribution[j, i] = inv_ext_correlation(pres[order])
+        p_distribution[0, j, i] = inv_ext_correlation(pres[order])
+    
+    pres_high_rich = pres[ind_high_rich]
+    for i in range(itera):
+        order = np.argsort(np.random.rand(len(pres_high_rich)))
+        p_distribution[1, j, i] = inv_ext_correlation(pres_high_rich[order])
         
-    meta_data.loc[study_id, "p_value"] = np.sum(meta_data.loc[study_id, "corr"]>p_distribution[j])/itera
-    meta_data.loc[study_id, "rand_corr"] = np.mean(p_distribution[j])
+    meta_data.loc[study_id, "p_value"] = np.sum(meta_data.loc[study_id, "corr"]>p_distribution[0, j])/itera
+    meta_data.loc[study_id, "rand_corr"] = np.mean(p_distribution[0, j])
+    meta_data.loc[study_id, "p_value_high_rich"] = np.sum(meta_data.loc[study_id, "corr_high_rich"]>p_distribution[1, j])/itera
+    if np.isnan(meta_data.loc[study_id, "p_value"]):
+        raise
     
 #"""
 identities = [biotime_colors[key][0] for key in keys]
@@ -90,39 +101,50 @@ plt.hist([1-meta_data.loc[meta_data.identity == ident, "p_value"]
           for ident in identities],
          bins = np.linspace(0,1,41), stacked = True, color = [biotime_colors[key] for key in keys],
          label = keys)
-plt.xlabel("p value of correlation")
-plt.ylabel("Frequency")
+fs = 16
+plt.xlabel("p value of correlation", fontsize = fs)
+plt.ylabel("Frequency", fontsize = fs)
 
+plt.legend(fontsize = fs)
 plt.xticks([0,0.05, 0.5, 1],  ["0",0.05, 0.5, 1])
 plt.xlim([0,1])
 fig.savefig("Figure_invasion_extinctions_correlation.pdf")
 
-fig, ax = plt.subplots(1,2,figsize = (9,7), sharey = True)
+##############################################################################
+# exclude datasets with to large fluctuations in richness
 
-bins = np.linspace(-1,1,41)
-ax[0].hist(meta_data["corr"], bins = bins, label = "Real correlation")
-ax[0].hist(meta_data.rand_corr, bins = bins, label = "Reference", alpha = 0.5)
+fig, ax = plt.subplots(1,2,sharex = True, figsize = (9,7), sharey = True)
 
-ax[1].hist([1-meta_data.loc[meta_data.identity == ident, "p_value"]
+ax[0].hist([1-meta_data.loc[meta_data.identity == ident, "p_value_high_rich"]
           for ident in identities],
          bins = np.linspace(0,1,41), stacked = True, color = [biotime_colors[key] for key in keys],
          label = keys)
 
-ax[0].legend()
-ax[0].axvline(0, color = "k")
+m_data = meta_data[meta_data.include]
+ax[1].hist([1-m_data.loc[m_data.identity == ident, "p_value"]
+          for ident in identities],
+         bins = np.linspace(0,1,41), stacked = True, color = [biotime_colors[key] for key in keys],
+         label = keys)
+fs = 16
+ax[0].set_xlabel("p value of correlation", fontsize = fs)
+ax[1].set_xlabel("p value of correlation", fontsize = fs)
+ax[0].set_ylabel("Frequency", fontsize = fs)
 
-ax[0].set_ylabel("Frequency")
-ax[0].set_xlabel("Correlation of\ninvasion and extinction")
-ax[1].set_xlabel("p-value of correlation")
+ax[0].legend(fontsize = fs)
+plt.xticks([0, 0.5, 1],  [0, 0.5, 1])
+plt.xlim([0,1])
 
+ax[0].set_title("A", loc = "left", fontsize = fs)
+ax[1].set_title("B", loc = "left", fontsize = fs)
 
+fig.savefig("Figure_ap_correlation_exclude_datasets.pdf")
 
-fig.savefig("Figure_ap_correlation.pdf")
 #"""
 ##############################################################################
 # compare actual correlation with correlation based on randomness
 
 fig, ax = plt.subplots(5,5, sharex = True, sharey = True, figsize = (9,9))
+bins = np.linspace(-1,1,51)
 for i in range(len(ax)):
     ax[i,0].set_ylabel("Frequency")
     ax[-1,i].set_xlabel("Correlation")
@@ -131,14 +153,14 @@ ax = ax.flatten()
 ind = np.argsort(1-meta_data.p_value.values)
 
 for i, a in enumerate(ax):
-    a.hist(p_distribution[ind[i]], bins = bins, color = biotime_colors[meta_data.TAXA.values[ind[i]]],
+    a.hist(p_distribution[0, ind[i]], bins = bins, color = biotime_colors[meta_data.TAXA.values[ind[i]]],
            density = True)
+    a.text(0.08, 0.85, "p = {}".format(np.round(1-meta_data.p_value.values[ind[i]],2)), 
+           transform = a.transAxes)
     a.axvline(meta_data["corr"].values[ind[i]], color = "r")
     a.axvline(0, color = "grey")
     a.set_title(meta_data.TAXA.values[ind[i]])
     
 fig.tight_layout()
 fig.savefig("Figure_ap_comparison_correlatoin.pdf")
-
-
-
+#"""

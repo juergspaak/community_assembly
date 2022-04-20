@@ -9,11 +9,12 @@ np.random.seed(0)
 
 fig, ax = plt.subplots(2,3, sharex = True, sharey = True,
                        figsize = (9,9))
-ax[0,0].set_ylabel("Trait")
-ax[1,0].set_ylabel("Trait")
-ax[1,0].set_xlabel("Year")
-ax[1,1].set_xlabel("Year")
-ax[1,2].set_xlabel("Year")
+fs = 16
+ax[0,0].set_ylabel("Trait", fontsize = fs)
+ax[1,0].set_ylabel("Trait", fontsize = fs)
+ax[1,0].set_xlabel("Year", fontsize = fs)
+ax[1,1].set_xlabel("Year", fontsize = fs)
+ax[1,2].set_xlabel("Year", fontsize = fs)
 
 ax = ax.flatten()
 
@@ -44,8 +45,8 @@ for i, key in enumerate(keys):
     present, equi_all, surv = ap.community_assembly(species_id, pr = False)
     fp.plot_traits(ax[[i]], surv, species_id)
     
-    ax[i].set_title("ABCDEF"[i], loc = "left")
-    ax[i].set_title(key)
+    ax[i].set_title("ABCDEF"[i], loc = "left", fontsize = fs)
+    ax[i].set_title(key, fontsize = fs)
     
 ax[0].set_xlim([0,years])
 

@@ -63,18 +63,22 @@ for i in range(2):
         ax[1,i].plot(time, percentiles[1], color = col_ref)
         ax[1,i].fill_between(time, percentiles[0], percentiles[2],
                              color = col_ref, alpha = 0.5)
-    
-ax[0,0].set_title("Basal species")
-ax[0,1].set_title("Predator species")
 
-ax[0,0].set_ylabel("Mean of tratis")
-ax[1,0].set_ylabel("Variance of traits")
-ax[1,0].set_xlabel("Time")
-ax[1,1].set_xlabel("Time")
+fs = 16
+ax[0,0].set_title("Basal species", fontsize = 16)
+ax[0,1].set_title("Predator species", fontsize = 16)
+
+ax[0,0].set_ylabel("Mean of tratis", fontsize = 16)
+ax[1,0].set_ylabel("Variance of traits", fontsize = 16)
+ax[1,0].set_xlabel("Time", fontsize = 16)
+ax[1,1].set_xlabel("Time", fontsize = 16)
 ax[1,0].set_xlim([100,time[-1]])
 ax[1,0].set_ylim([0, None])
 
-ax[0,0].legend()
+ax[0,0].legend(fontsize = 16)
+
+for i, a in enumerate(ax.flatten()):
+    a.set_title("ABCD"[i], fontsize = 16)
 
 fig.tight_layout()
 fig.savefig("Figure_trait_variation.pdf")

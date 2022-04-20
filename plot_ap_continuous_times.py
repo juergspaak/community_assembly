@@ -9,6 +9,7 @@ import functions_for_plotting as fp
 np.random.seed(2)
 
 fig, ax = plt.subplots(2,1, sharex = False, sharey = False, figsize = (9,7))
+fs = 16
 
 n_year_shown = 20 # number of years shown with densities over time
 
@@ -105,12 +106,13 @@ ax[1].imshow(invasions[::-1], interpolation = "none", alpha = 0.5,
 #### add layout
 
 ax[0].set_xlim([years-n_year_shown, years])
-ax[0].set_xlabel("Year")
-ax[1].set_xlabel("Year")
-ax[1].set_ylabel("Species trait")
-ax[0].set_ylabel("Species densities")
+ax[0].set_xlabel("Year", fontsize = fs)
+ax[1].set_xlabel("Year", fontsize = fs)
+ax[1].set_ylabel("Species trait", fontsize = fs)
+ax[0].set_ylabel("Species densities", fontsize = fs)
 
-ax[0].set_title("A", loc = "left")
-ax[1].set_title("B", loc = "left")
+ax[0].set_title("A", loc = "left", fontsize = fs)
+ax[1].set_title("B", loc = "left", fontsize = fs)
+fig.tight_layout()
 
 fig.savefig("Figure_ap_continuous_times.pdf")

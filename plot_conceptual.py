@@ -34,7 +34,7 @@ ax[0].plot(np.nan, np.nan, 'bs', label = "Possible invaison", alpha = 0.5)
 ax[0].imshow(invasions[::-1], interpolation = "none", alpha = 0.5,
              vmin = 1, vmax = 1.5, extent = extent,
              aspect = "auto", cmap = cmap)
-ax[0].legend()
+ax[0].legend(fontsize = fs)
 
 species_id = ap.generate_species(2, time, level = [1,1],
                                  omega = omega)
@@ -63,27 +63,23 @@ ax[1].imshow(invasions[::-1], interpolation = "none", alpha = 0.5,
              vmin = 0.5, vmax = 1, extent = extent,
              aspect = "auto", cmap = cmap)
 
-"""ax[1].scatter(np.repeat(np.arange(time)[:,np.newaxis], ap.n_invs, axis = 1)[invasions>0],
-        np.repeat(ap.species_id_invader_pred["loc"][np.newaxis], time, axis = 0)[invasions>0]
-            , color = 'r', s = s, alpha = 0.2, marker = "s")"""
-
 # layout
-
+fs = 16
 ax[1].plot(np.nan, np.nan, "r", label = "Predator")
 ax[1].plot(np.nan, np.nan, "b", label = "Prey")
-ax[1].legend(loc = "upper left")
+ax[1].legend(loc = "upper left", fontsize = fs)
 
 ax[1].set_xlim([0, time])
 ax[1].set_ylim(ylim)
 
-ax[1].set_xlabel("Time")
-ax[0].set_ylabel("Trait")
-ax[1].set_ylabel("Trait")
+ax[1].set_xlabel("Time", fontsize = fs)
+ax[0].set_ylabel("Trait", fontsize = fs)
+ax[1].set_ylabel("Trait", fontsize = fs)
 
 ax[0].set_title("A", loc = "left")
-ax[0].set_title("Prey only")
+ax[0].set_title("Prey only", fontsize = fs)
 
-ax[1].set_title("B", loc = "left")
-ax[1].set_title("Predator and Prey")
+ax[1].set_title("B", loc = "left", fontsize = fs)
+ax[1].set_title("Predator and Prey", fontsize = fs)
 
 fig.savefig("Figure_conceptual.pdf")

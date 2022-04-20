@@ -12,11 +12,20 @@ similarity = np.empty((itera, itera))
 
 years = 2000
 omega = 4
+
+n = 8
+prey = np.arange(-n, n+1, 1)
+pred = np.arange(-n,n, 1) +0.5
+level = len(prey)*[0] + len(pred)*[1]
+
 for i, sigi in enumerate(sigs):
     for j, sigj in enumerate(sigs):
         species_id = ap.generate_species(1, years, level = [1,1],
-                                 omega = omega, sigs = [sigi, sigj],
-                                 alpha_max = [1,1.2])
+                                 omega = omega, sigs = [sigi, sigj])
+        # position first species at potentiall optimal locations
+        species_id["loc"][:,:len(level)] = np.append(2*sigi*prey, 2*sigj*pred)
+        species_id["level"][:,:len(level)] = level
+        
         present, equi_all, surv = ap.community_assembly(species_id, pr = False)
         
         lv = species_id["level"][:,np.newaxis]
@@ -28,31 +37,54 @@ for i, sigi in enumerate(sigs):
         print(i,j, richness[:,i,j])
 """
 
-fig, ax = plt.subplots(3,1, sharex = True, sharey = True, figsize = (9,9))
-
-cmap = ax[0].imshow(similarity, extent = [sigs[0], sigs[-1], sigs[0], sigs[-1]], origin = "lower")
-fig.colorbar(cmap, ax = ax[0])
-ax[0].axvline(omega/1.87, color = "k")
-ax[0].plot(sigs, sigs, 'r')
-
-cmap = ax[1].imshow(richness[0], extent = [sigs[0], sigs[-1], sigs[0], sigs[-1]]
-                    , origin = "lower", vmin = 0,
-                    vmax = np.nanpercentile(richness[0], 95))
-fig.colorbar(cmap, ax = ax[1])
-
-cmap = ax[2].imshow(richness[1], extent = [sigs[0], sigs[-1], sigs[0], sigs[-1]]
-                    , origin = "lower", vmin = 0,
-                    vmax = np.nanpercentile(richness[1], 95))
-fig.colorbar(cmap, ax = ax[2])
-
-# add layout
-ax[-1].set_xlabel("Niche width Predator")
-for i, a in enumerate(ax):
-    a.set_title("ABCDEFGHI"[i], loc = "left")
-    a.set_ylabel("Niche width basal species")
+fig = plt.figure(figsize = (10,11))
+fs = 16
+time = 2000
+cmap = "bwr"
+invasions = np.empty((len(ap.species_id_invader_basal["level"]), time))
+extent =  [0, time,ap.species_id_invader_basal["loc"][0], 
+                                   ap.species_id_invader_basal["loc"][-1]]
+sigs_examples = [[2.5,1.5], [2.8,2.7], [0.6,1.5], [0.6,2.5]]
+ax_id = [1,2,5,6]
+# first show example cases
+for j in range(4):
+    cax = fig.add_subplot(3,2,ax_id[j])
+    species_id = ap.generate_species(2, time, level = [1,1],
+                                 omega = omega, sigs = sigs_examples[j])
+    present, equi_all, surv = ap.community_assembly(species_id, pr = False)
     
-ax[0].set_title("Jaccard similarity")
-ax[1].set_title("Prey richness")
-ax[2].set_title("Predator richness")
+    fp.plot_traits([cax], surv, species_id)
+    cax.set_title("ABCD"[j], loc = "left", fontsize = fs)
+
+    cax.set_xlim([0,time])
+    cax.set_xlabel("Year", fontsize = fs)
+    cax.set_ylabel("Trait", fontsize = fs)
+cax = fig.add_axes([0.3,0.4,0.4,0.25])
+cmap_ax = fig.add_axes([0.7,0.4,0.05,0.25])
+cmap = cax.imshow(similarity, extent = [sigs[0], sigs[-1], sigs[0], sigs[-1]],
+                  origin = "lower")
+fig.colorbar(cmap, cax = cmap_ax)
+cax.plot(sigs, sigs, 'r')
+cax.axvline(omega/2, color = "k")
+cmap_ax.set_ylabel("Jaccard similarity", fontsize = fs)
+
+# annotate locations
+cax.annotate("", sigs_examples[0][::-1], [1/3,2/3]
+             , xycoords = "data", textcoords = "figure fraction",
+             arrowprops=dict(color = "red"))
+cax.annotate("", sigs_examples[1][::-1], [2/3,2/3]
+             , xycoords = "data", textcoords = "figure fraction",
+             arrowprops=dict(color = "red"))
+cax.annotate("", sigs_examples[2][::-1], [1/3,1/3]
+             , xycoords = "data", textcoords = "figure fraction",
+             arrowprops=dict(color = "red"))
+cax.annotate("", sigs_examples[3][::-1], [2/3,1/3]
+             , xycoords = "data", textcoords = "figure fraction",
+             arrowprops=dict(color = "red"))
+
+cax.set_xlabel("Predator niche width\n$\sigma_P$", fontsize = fs)
+cax.set_ylabel("Prey niche width\n$\sigma_B$", fontsize = fs)
+cax.set_title("E", loc = "left", fontsize = fs)
+fig.tight_layout()
 
 fig.savefig("Figure_ap_stability_vs_niche_width.pdf")
