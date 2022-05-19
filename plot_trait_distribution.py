@@ -48,7 +48,7 @@ for j, bw in enumerate([0.5, 0.25]):
         ax[1,j+1].text(0, 0.01, "$\sigma$", ha = "center", va = "bottom",
                        fontsize = fs)
      
-ax[0,1].set_title("Large kernel (Family focus)", fontsize = fs)
+ax[0,1].set_title("Large kernel", fontsize = fs)
 ax[0,2].set_title("Medium kernel", fontsize = fs)
 
 ax[0,1].set_ylim([0,None])

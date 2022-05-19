@@ -13,9 +13,9 @@ omega = 2
 mu_max = 1
 ms = np.array([.1,.1])
 
-n_invs = 101
+n_invs = 201
 species_id_invader_basal = {"level": np.zeros(n_invs),
-                  "loc": np.linspace(-3,3,n_invs),
+                  "loc": np.linspace(-4,4,n_invs),
                   "sig": np.full(n_invs, sigs[0]),
                   "alpha_max": np.full(n_invs, alpha_max[0]),
                   "m": np.full(n_invs, ms[0])}

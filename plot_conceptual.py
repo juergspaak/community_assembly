@@ -4,11 +4,13 @@ import matplotlib.pyplot as plt
 import assembly_functions as ap
 import functions_for_plotting as fp
 
-np.random.seed(0)
+np.random.seed(1)
 omega = 2
 time = 250
-ylim = [-3,3]
 s = 1
+
+ap.species_id_invader_basal["loc"] *= 1.2
+ylim = ap.species_id_invader_basal["loc"][[0,-1]]
 
 # basal species only
 species_id = ap.generate_species(2, time, level = [1,0],
@@ -34,7 +36,7 @@ ax[0].plot(np.nan, np.nan, 'bs', label = "Possible invaison", alpha = 0.5)
 ax[0].imshow(invasions[::-1], interpolation = "none", alpha = 0.5,
              vmin = 1, vmax = 1.5, extent = extent,
              aspect = "auto", cmap = cmap)
-ax[0].legend(fontsize = fs)
+ax[0].legend(fontsize = 16)
 
 species_id = ap.generate_species(2, time, level = [1,1],
                                  omega = omega)

@@ -2,8 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from scipy.stats import pearsonr, linregress
+
 from functions_for_plotting import biotime_colors, keys
 
+"""
 # load simulations
 path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
 # load prey only data
@@ -32,6 +35,8 @@ meta_data["rand_corr"] = np.nan # correlation of perturbed data
 
 meta_data["include"] = True
 
+###############################################################################
+# compute correlation between invasion and extinction
 
 def inv_ext_correlation(pres):
     # compute correlation between invasion and extinction
@@ -59,7 +64,7 @@ def inv_ext_correlation(pres):
 
 
 # compute correlation between invasion and extinction
-itera = 1000
+itera = 100
 p_distribution = np.empty((2, len(meta_data), itera))
 for j, study_id in enumerate(meta_data.index):
     pres = presences[str(study_id)] == 1 # conversion to boolean
@@ -90,75 +95,98 @@ for j, study_id in enumerate(meta_data.index):
     meta_data.loc[study_id, "p_value_high_rich"] = np.sum(meta_data.loc[study_id, "corr_high_rich"]>p_distribution[1, j])/itera
     if np.isnan(meta_data.loc[study_id, "p_value"]):
         raise
+        
+meta_data["p_value"] = 1 - meta_data["p_value"]
+meta_data["p_value_high_rich"] = 1 - meta_data["p_value_high_rich"]
+
     
-#"""
-identities = [biotime_colors[key][0] for key in keys]
+###############################################################################
+# correlation between invasion and extinction over time
 
-fig = plt.figure()
-plt.hist([1-meta_data.loc[meta_data.identity == ident, "p_value"]
-          for ident in identities],
-         bins = np.linspace(0,1,41), stacked = True, color = [biotime_colors[key] for key in keys],
-         label = keys)
-fs = 16
-plt.xlabel("p value of correlation", fontsize = fs)
-plt.ylabel("Frequency", fontsize = fs)
+meta_data["p_inv"] = np.nan
+meta_data["p_ext"] = np.nan
+meta_data["R2_inv"] = np.nan
+meta_data["R2_ext"] = np.nan
+meta_data["p_rich"] = np.nan
+meta_data["R2_rich"] = np.nan
+meta_data["rich_max"] = np.nan
+meta_data["rich_min"] = np.nan
 
-plt.legend(fontsize = fs)
-plt.xticks([0,0.05, 0.5, 1],  ["0",0.05, 0.5, 1])
-plt.xlim([0,1])
-fig.savefig("Figure_invasion_extinctions_correlation.pdf")
-
-##############################################################################
-# exclude datasets with to large fluctuations in richness
-
-fig, ax = plt.subplots(1,2,sharex = True, figsize = (9,7), sharey = True)
-
-ax[0].hist([1-meta_data.loc[meta_data.identity == ident, "p_value_high_rich"]
-          for ident in identities],
-         bins = np.linspace(0,1,41), stacked = True, color = [biotime_colors[key] for key in keys],
-         label = keys)
-
-m_data = meta_data[meta_data.include]
-ax[1].hist([1-m_data.loc[m_data.identity == ident, "p_value"]
-          for ident in identities],
-         bins = np.linspace(0,1,41), stacked = True, color = [biotime_colors[key] for key in keys],
-         label = keys)
-fs = 16
-ax[0].set_xlabel("p value of correlation", fontsize = fs)
-ax[1].set_xlabel("p value of correlation", fontsize = fs)
-ax[0].set_ylabel("Frequency", fontsize = fs)
-
-ax[0].legend(fontsize = fs)
-plt.xticks([0, 0.5, 1],  [0, 0.5, 1])
-plt.xlim([0,1])
-
-ax[0].set_title("A", loc = "left", fontsize = fs)
-ax[1].set_title("B", loc = "left", fontsize = fs)
-
-fig.savefig("Figure_ap_correlation_exclude_datasets.pdf")
-
-#"""
-##############################################################################
-# compare actual correlation with correlation based on randomness
-
-fig, ax = plt.subplots(5,5, sharex = True, sharey = True, figsize = (9,9))
-bins = np.linspace(-1,1,51)
-for i in range(len(ax)):
-    ax[i,0].set_ylabel("Frequency")
-    ax[-1,i].set_xlabel("Correlation")
-
-ax = ax.flatten()
-ind = np.argsort(1-meta_data.p_value.values)
-
-for i, a in enumerate(ax):
-    a.hist(p_distribution[0, ind[i]], bins = bins, color = biotime_colors[meta_data.TAXA.values[ind[i]]],
-           density = True)
-    a.text(0.08, 0.85, "p = {}".format(np.round(1-meta_data.p_value.values[ind[i]],2)), 
-           transform = a.transAxes)
-    a.axvline(meta_data["corr"].values[ind[i]], color = "r")
-    a.axvline(0, color = "grey")
-    a.set_title(meta_data.TAXA.values[ind[i]])
+for study_id in study_ids:
+    # load dataset, shape (years, species)
+    pres = presences[study_id] ==1
     
-fig.tight_layout()
-fig.savefig("Figure_ap_comparison_correlatoin.pdf")
+    years = presences["year_{}".format(study_id)][:-1]
+    
+    # proportion of invaders
+    invasion = np.sum(pres[1:] & ~pres[:-1], axis = 1)/np.sum(pres[1:], axis = 1)
+    
+    meta_data.loc[int(study_id), ["R2_inv", "p_inv"]] = pearsonr(years, invasion)
+
+    # proportion of extinctions
+    extinction = np.sum(pres[:-1] & ~pres[1:], axis = 1)/np.sum(pres[:-1], axis = 1)
+    meta_data.loc[int(study_id), ["R2_ext", "p_ext"]] = pearsonr(years, extinction)
+    
+    # species richness
+    rich = np.sum(pres, axis = 1)
+    meta_data.loc[int(study_id), ["R2_rich", "p_rich"]] = pearsonr(presences["year_{}".format(study_id)],
+                                                                   rich)
+    meta_data.loc[int(study_id), "rich_max"] = np.amax(rich)
+    meta_data.loc[int(study_id), "rich_min"] = np.amin(rich)
+    
+
+meta_data["R2_ext"] = meta_data["R2_ext"]**2
+meta_data["R2_inv"] = meta_data["R2_inv"]**2
+meta_data["R2_rich"] = meta_data["R2_rich"]**2
 #"""
+    
+meta_data = meta_data
+presences = presences
+# condition to be a useful candidate
+# not driven by climate change, i.e. no correlation between time and
+# invasion, extinctions or richness
+p_tresh = 0.05
+R2_tresh = 0.1
+ind_climate = (((meta_data.p_inv>p_tresh) | (meta_data.R2_inv < R2_tresh))
+               & ((meta_data.p_ext>p_tresh) | (meta_data.R2_ext < R2_tresh))
+               & ((meta_data.p_rich>p_tresh) | (meta_data.R2_rich < R2_tresh)))
+
+# strong correlation between invasion and extinctions
+ind = ind_climate & (meta_data.p_value_high_rich<0.05)
+
+# not too strong fluctuations in richness
+#ind = ind & (meta_data.rich_max < 4*meta_data.rich_min)
+
+print(sum(ind))
+
+
+def plot_pres(study_id):
+    pres = presences[str(study_id)] == 1
+    pres = pres[:, np.any(~pres, axis = 0)]
+    if np.any(np.all(~pres, axis = 1)):
+        raise
+    pres = np.append(np.full((1, pres.shape[1]), False), pres, axis = 0)
+    pres = np.append(pres, np.full((1, pres.shape[1]), False), axis = 0)
+    years = presences["year_{}".format(study_id)]
+    trait_starts, starts = np.where((pres[1:] & ~pres[:-1]).T)
+    trait_ends, ends = np.where((pres[:-1] & ~pres[1:]).T)
+    
+    for i in range(len(starts)):
+        plt.plot([years[starts[i]], years[ends[i]-1]],
+                [trait_starts[i], trait_ends[i]], 'b-', alpha = 0.5)
+        if trait_starts[i] != trait_ends[i]:
+            raise
+        if starts[i] > ends[i]:
+            raise
+
+    
+for study_id in study_ids:
+    if meta_data.loc[int(study_id), "p_value"]>0.05:
+        continue
+    if meta_data.loc[int(study_id), "rich_max"] > 100:
+        continue
+    plt.figure()
+    plot_pres(study_id)
+    plt.title(study_id)
+    plt.show()
+    
