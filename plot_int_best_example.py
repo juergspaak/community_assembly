@@ -6,7 +6,7 @@ from scipy.stats import pearsonr, linregress
 
 from functions_for_plotting import biotime_colors, keys
 
-"""
+
 # load simulations
 path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
 # load prey only data
@@ -138,7 +138,7 @@ for study_id in study_ids:
 meta_data["R2_ext"] = meta_data["R2_ext"]**2
 meta_data["R2_inv"] = meta_data["R2_inv"]**2
 meta_data["R2_rich"] = meta_data["R2_rich"]**2
-#"""
+#
     
 meta_data = meta_data
 presences = presences
@@ -160,10 +160,11 @@ ind = ind_climate & (meta_data.p_value_high_rich<0.05)
 print(sum(ind))
 
 
-def plot_pres(study_id):
+def plot_pres(study_id, ax = plt):
     pres = presences[str(study_id)] == 1
     pres = pres[:, np.any(~pres, axis = 0)]
     if np.any(np.all(~pres, axis = 1)):
+        return
         raise
     pres = np.append(np.full((1, pres.shape[1]), False), pres, axis = 0)
     pres = np.append(pres, np.full((1, pres.shape[1]), False), axis = 0)
@@ -172,21 +173,28 @@ def plot_pres(study_id):
     trait_ends, ends = np.where((pres[:-1] & ~pres[1:]).T)
     
     for i in range(len(starts)):
-        plt.plot([years[starts[i]], years[ends[i]-1]],
+        ax.plot([years[starts[i]], years[ends[i]-1]],
                 [trait_starts[i], trait_ends[i]], 'b-', alpha = 0.5)
         if trait_starts[i] != trait_ends[i]:
             raise
         if starts[i] > ends[i]:
             raise
 
-    
-for study_id in study_ids:
+fig, ax = plt.subplots(5,3, figsize = (16,16))
+ax = ax.flatten()
+studies = []
+counter = -1
+for i, study_id in enumerate(study_ids):
     if meta_data.loc[int(study_id), "p_value"]>0.05:
         continue
     if meta_data.loc[int(study_id), "rich_max"] > 100:
         continue
-    plt.figure()
-    plot_pres(study_id)
-    plt.title(study_id)
-    plt.show()
+    counter += 1
+    studies.append(study_id)
+    plot_pres(study_id, ax[counter])
+    ax[counter].set_title(study_id)
+    
+fig.tight_layout()
+
+fig.savefig("Figure_int_best_example.pdf")
     

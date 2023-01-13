@@ -6,6 +6,7 @@ from matplotlib.cm import Set1
 import assembly_functions as ap
 
 colors = ["b", "r", "g"]
+zorders = [1,2]
 labels = ["Phytoplankton", "Zooplankton", "Mutualists"]
 
 def plot_traits(axc, equi, species_id, plot_invasion = False):
@@ -23,7 +24,7 @@ def plot_traits(axc, equi, species_id, plot_invasion = False):
             elif np.sum(surv[i,:,y])>1:
                 a.plot(years[surv[i,:,y]],
                        np.repeat(species_id["loc"][i,y], np.sum(surv[i,:,y])),
-                       color = colors[value], linewidth = 3)
+                       color = colors[value], linewidth = 3, zorder = zorders[value])
     if plot_invasion:
         plot_invasion_prob(axc, equi, species_id)
                 
@@ -113,18 +114,29 @@ def plot_persistence_time(axc, surv, species_id, cutoff = 50
     axc.semilogy()
     
 biotime_colors = Set1(np.linspace(0,1,9))
-keys = ["Birds","Invertebrates",
+keys = ["Birds","Inverte-\nbrates",
                         "Terrestrial\nplants", "Fish", "Other"]
 biotime_colors = {key: biotime_colors[i] for i, key in enumerate(keys)}
 biotime_colors["Mammals"] = biotime_colors["Other"]
 biotime_colors["Benthos"] = biotime_colors["Other"]
 biotime_colors["All"] = biotime_colors["Other"]
 biotime_colors["Amphibians"] = biotime_colors["Other"]
-biotime_colors["Marine invertebrates"] = biotime_colors["Invertebrates"]
-biotime_colors["Terrestrial invertebrates"] = biotime_colors["Invertebrates"]
-biotime_colors["Freshwater invertebrates"] = biotime_colors["Invertebrates"]
+biotime_colors["Marine invertebrates"] = biotime_colors["Inverte-\nbrates"]
+biotime_colors["Terrestrial invertebrates"] = biotime_colors["Inverte-\nbrates"]
+biotime_colors["Freshwater invertebrates"] = biotime_colors["Inverte-\nbrates"]
 biotime_colors["Terrestrial plants"] = biotime_colors["Terrestrial\nplants"]
 
+"""
+import pandas as pd
+path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
+meta_data = "BioTIMEMetadata_24_06_2021.csv"
+meta_data = pd.read_csv(path + meta_data, usecols=np.arange(27),
+                            encoding = 'unicode_escape')
+# plot biotime by realm
+keys = set(meta_data["REALM"])
+for i, key in enumerate(keys):
+    biotime_colors[key] = Set1(np.linspace(0,1,len(keys))[i])
+"""
 if __name__ == "__main__":
     species_id = ap.generate_species(2, 500, omega = 4, sigs = [3, 2])
     species_id["level"][:,:20] = 0

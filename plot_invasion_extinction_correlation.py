@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from functions_for_plotting import biotime_colors, keys
-
+"""
 # load simulations
 path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
 # load prey only data
@@ -59,7 +59,7 @@ def inv_ext_correlation(pres):
 
 
 # compute correlation between invasion and extinction
-itera = 1000
+itera = 100
 p_distribution = np.empty((2, len(meta_data), itera))
 for j, study_id in enumerate(meta_data.index):
     pres = presences[str(study_id)] == 1 # conversion to boolean
@@ -92,11 +92,19 @@ for j, study_id in enumerate(meta_data.index):
         raise
     
 #"""
+keys = ["Birds","Inverte-\nbrates",
+                        "Terrestrial\nplants", "Fish", "Other"]
+keys = list(set(meta_data["REALM"]))
+
 identities = [biotime_colors[key][0] for key in keys]
 
 fig = plt.figure()
-plt.hist([1-meta_data.loc[meta_data.identity == ident, "p_value"]
-          for ident in identities],
+#plt.hist([1-meta_data.loc[meta_data.identity == ident, "p_value"]
+#          for ident in identities],
+#         bins = np.linspace(0,1,41), stacked = True, color = [biotime_colors[key] for key in keys],
+#         label = keys)
+plt.hist([1-meta_data.loc[meta_data.REALM == ident, "p_value"]
+          for ident in set(meta_data.REALM)],
          bins = np.linspace(0,1,41), stacked = True, color = [biotime_colors[key] for key in keys],
          label = keys)
 fs = 16
@@ -107,7 +115,7 @@ plt.legend(fontsize = fs)
 plt.xticks([0,0.05, 0.5, 1],  ["0",0.05, 0.5, 1])
 plt.xlim([0,1])
 fig.savefig("Figure_invasion_extinctions_correlation.pdf")
-
+"""
 ##############################################################################
 # exclude datasets with to large fluctuations in richness
 
@@ -140,7 +148,7 @@ fig.savefig("Figure_ap_correlation_exclude_datasets.pdf")
 #"""
 ##############################################################################
 # compare actual correlation with correlation based on randomness
-
+"""
 fig, ax = plt.subplots(5,5, sharex = True, sharey = True, figsize = (9,9))
 bins = np.linspace(-1,1,51)
 for i in range(len(ax)):

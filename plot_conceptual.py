@@ -14,7 +14,7 @@ ylim = ap.species_id_invader_basal["loc"][[0,-1]]
 
 # basal species only
 species_id = ap.generate_species(2, time, level = [1,0],
-                                 omega = omega)
+                                 omega = 2)
 present, equi_all, surv = ap.community_assembly(species_id, pr = False)
 
 fig, ax = plt.subplots(2,1, sharex = True, sharey = True, figsize = (9,7))

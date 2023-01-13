@@ -2,6 +2,7 @@ import numpy as np
 from itertools import combinations
 
 from various_competition_kernels import compute_LV_from_traits_kernels
+import multidimensional_assembly_functions as maf
 
 def LV_model(t, N, A, mu):
     return N*(mu-A.dot(N))
@@ -26,16 +27,10 @@ species_id_invader_pred = {"level": np.ones(n_invs),
                   "alpha_max": np.full(n_invs, alpha_max[1]),
                   "m": np.full(n_invs, ms[1])}
 
-def generate_species(n_coms = 200, years = 800, locs = np.zeros(2),
+def generate_species(n_coms = 200, years = 800,
                      sig_locs = None, sigs = sigs,
-                     alpha_max = alpha_max, omega = omega, mu_max = mu_max,
+                     alpha_max = alpha_max, omega = None, mu_max = mu_max,
                      ms = ms, level = [0.5, 0.5], kernel = False):
-    
-    # choose random trait values such that species cover all trait space
-    if sig_locs is None:
-        # about 2% of basal species have negative intrinsic growth rate
-        sig = omega*np.sqrt(2*np.log(mu_max/ms[0]))/2.5
-        sig_locs = [sig, sig]
     
     level = np.array(level)/np.sum(level)
     com = (n_coms, years)
@@ -51,10 +46,26 @@ def generate_species(n_coms = 200, years = 800, locs = np.zeros(2),
               # competition kernel
               "kernel": kernel}
     
+    if omega is None:
+        omega = np.random.uniform(2,4,n_coms)
+    else:
+        # adjust size of omega if it was given as integer
+        om = np.empty(n_coms)
+        om[:] = omega
+        omega = om
+        
+    # choose random trait values such that species cover all trait space
+    if sig_locs is None:
+        # about 2% of basal species have negative intrinsic growth rate
+        sig_locs = omega*np.sqrt(2*np.log(mu_max/ms[0]))/2.5
+    
+    
+    
     # potentially change location and variation of trophic levels
-    for i in range(len(level)):
-        species_id["loc"][species_id["level"] == i] *= sig_locs[i]
-        species_id["loc"][species_id["level"] == i] += locs[i]
+    species_id["loc"] *= sig_locs[:,np.newaxis]
+    
+    #species_id["loc"] = np.random.uniform(-1,1,com)
+    #species_id["loc"] *= omega[:,np.newaxis]*np.sqrt(2*np.log(mu_max/ms[0]))
     
     # first species to arrive must be basal to avoid issues
     species_id["level"][:,:2] = 0
@@ -72,7 +83,7 @@ def compute_LV_from_traits(level, loc, sig, alpha_max, m, omega = omega,
     id_pred = np.where(level == 1)[0]
     
     # species interaction if all species were prey
-    sig_basal = np.sqrt(sig[:,np.newaxis]**2 + sig**2)
+    sig_basal = np.sqrt(sig[:,np.newaxis]**2 + sig**2)/np.sqrt(2)
     A = (alpha_max[:,np.newaxis]*alpha_max
             *np.exp(-(loc[:,np.newaxis] - loc)**2/2/sig_basal**2))
     
@@ -96,6 +107,9 @@ def compute_LV_from_traits(level, loc, sig, alpha_max, m, omega = omega,
 
 def compute_LV_param(species_id, i = 0, pres = [0,1]):
     
+    if species_id["loc"].ndim == 3:
+        return maf.compute_LV_param_m(species_id, i, pres)
+    
     # get data
     level = species_id["level"][i,pres]
     loc = species_id["loc"][i, pres]
@@ -105,12 +119,12 @@ def compute_LV_param(species_id, i = 0, pres = [0,1]):
     
     if not species_id["kernel"]:
         return compute_LV_from_traits(level, loc, sig, alpha_max, m,
-                                  omega = species_id["omega"],
+                                  omega = species_id["omega"][i],
                                   mu_max = species_id["mu_max"])
     
     else:
         return compute_LV_from_traits_kernels(level, loc, sig, alpha_max, m,
-                                  omega = species_id["omega"],
+                                  omega = species_id["omega"][i],
                                   mu_max = species_id["mu_max"],
                                   kernel = species_id["kernel"])
 
@@ -131,7 +145,7 @@ def invasion_success(species_id, i, equi, species_id_invader):
     
     mu, A = compute_LV_from_traits(level, loc, sig, alpha_max, m,
                                    mu_max = species_id["mu_max"],
-                                  omega = species_id["omega"])
+                                  omega = species_id["omega"][i])
     equi = np.append(equi[pres], np.zeros(len(species_id_invader["level"])))
     inv = mu - A.dot(equi)
     return inv, loc
@@ -207,7 +221,7 @@ def community_equilibrium(mu, A):
     raise ValueError
 
 def community_assembly(species_id, pr = True):
-    n_coms, years = species_id["loc"].shape
+    n_coms, years = species_id["loc"].shape[:2]
 
     present = np.full((n_coms, years+1, years), False, dtype = bool)
     present[:,np.arange(years), np.arange(years)] = True
@@ -275,8 +289,13 @@ def invasion_scheme(mu, A):
     return r_i
     
 
-if False and __name__ == "__main__":
-    species_id = generate_species(2, 200, omega = 2)
+if __name__ == "__main__":
+    n_coms = 3
+    years = 800
+    locs = np.zeros(2)
+    level = [0.5,0]
+    kernel = False
+    species_id = generate_species(2, years, omega = None, level = level)
     present, equi_all, surv = community_assembly(species_id, pr = False)
 
     import functions_for_plotting as fp
