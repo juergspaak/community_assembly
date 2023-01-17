@@ -1,7 +1,10 @@
 import pandas as pd
 import numpy as np
 
-path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
+path = "C:/Users/Jurg/Documents/science_backup/P14_community_assembly/"
+# the "BioTIMEMetadata_24_06_2021.csv" and the "BioTIMEQuery_24_06_2021.csv"
+# are not part of the depository, they must be downloaded from bioTIME directly
+# due to size restrictions
 file = "BioTIMEQuery_24_06_2021.csv"
 meta_data = "BioTIMEMetadata_24_06_2021.csv"
 meta_data = pd.read_csv(path + meta_data, usecols=np.arange(27),
@@ -48,6 +51,6 @@ for i, study_id in enumerate(studies):
     
 #"""
 
-np.savez(path + "biotime_converted2.npz", **presences, **years_dict,
+np.savez("biotime_converted.npz", **presences, **years_dict,
          study_ids = list(presences.keys()),
          **species_dict, **samples_dict)

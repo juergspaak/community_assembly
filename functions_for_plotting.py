@@ -126,9 +126,9 @@ biotime_colors["Terrestrial invertebrates"] = biotime_colors["Inverte-\nbrates"]
 biotime_colors["Freshwater invertebrates"] = biotime_colors["Inverte-\nbrates"]
 biotime_colors["Terrestrial plants"] = biotime_colors["Terrestrial\nplants"]
 
-"""
+
 import pandas as pd
-path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
+path = "C:/Users/Jurg/Documents/science_backup/P14_community_assembly/"
 meta_data = "BioTIMEMetadata_24_06_2021.csv"
 meta_data = pd.read_csv(path + meta_data, usecols=np.arange(27),
                             encoding = 'unicode_escape')
@@ -136,7 +136,7 @@ meta_data = pd.read_csv(path + meta_data, usecols=np.arange(27),
 keys = set(meta_data["REALM"])
 for i, key in enumerate(keys):
     biotime_colors[key] = Set1(np.linspace(0,1,len(keys))[i])
-"""
+
 if __name__ == "__main__":
     species_id = ap.generate_species(2, 500, omega = 4, sigs = [3, 2])
     species_id["level"][:,:20] = 0

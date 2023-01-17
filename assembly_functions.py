@@ -2,7 +2,6 @@ import numpy as np
 from itertools import combinations
 
 from various_competition_kernels import compute_LV_from_traits_kernels
-import multidimensional_assembly_functions as maf
 
 def LV_model(t, N, A, mu):
     return N*(mu-A.dot(N))
@@ -106,9 +105,6 @@ def compute_LV_from_traits(level, loc, sig, alpha_max, m, omega = omega,
     return mu, np.round(A,8)
 
 def compute_LV_param(species_id, i = 0, pres = [0,1]):
-    
-    if species_id["loc"].ndim == 3:
-        return maf.compute_LV_param_m(species_id, i, pres)
     
     # get data
     level = species_id["level"][i,pres]

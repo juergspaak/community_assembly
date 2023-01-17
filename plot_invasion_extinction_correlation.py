@@ -3,13 +3,11 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 from functions_for_plotting import biotime_colors, keys
-"""
-# load simulations
-path = "C:/Users/Juerg Spaak/Documents/Science backup/TND/"
-# load prey only data
 
-path = "C:/Users/Juerg Spaak/Documents/Science backup/P14_community_assembly/"
-presences = np.load(path + "biotime_converted.npz")
+
+
+path = "C:/Users/Jurg/Documents/science_backup/P14_community_assembly/"
+presences = np.load("biotime_converted.npz")
 
 study_ids = presences["study_ids"]
 # only work with long datasets
@@ -115,7 +113,7 @@ plt.legend(fontsize = fs)
 plt.xticks([0,0.05, 0.5, 1],  ["0",0.05, 0.5, 1])
 plt.xlim([0,1])
 fig.savefig("Figure_invasion_extinctions_correlation.pdf")
-"""
+
 ##############################################################################
 # exclude datasets with to large fluctuations in richness
 
@@ -148,7 +146,7 @@ fig.savefig("Figure_ap_correlation_exclude_datasets.pdf")
 #"""
 ##############################################################################
 # compare actual correlation with correlation based on randomness
-"""
+
 fig, ax = plt.subplots(5,5, sharex = True, sharey = True, figsize = (9,9))
 bins = np.linspace(-1,1,51)
 for i in range(len(ax)):
